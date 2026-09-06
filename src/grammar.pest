@@ -1,0 +1,23 @@
+WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
+COMMENT    = _{ "--" ~ (!"\n" ~ ANY)* }
+
+identifier_char = _{ ASCII_ALPHANUMERIC | "_" }
+variable        = @{ identifier_char+ }
+
+// Atomic array rule: whitespace within it is explicitly defined or controlled
+array = { variable ~ ":=" ~ array_val ~ ";" }
+
+array_element = { (!("[" | "]" | "," | ";") ~ ANY)+ }
+
+array_val = {
+    "[" ~ "]" |
+    "[" ~ array_element ~ ("," ~ array_element)* ~ "]"
+}
+
+// Single non-array character
+raw_char = _{ !array ~ ANY }
+
+// Silent atomic chunk to avoid polluting AST with hundreds of individual raw_char pairs
+raw_nusmv_chunk = { raw_char+ }
+
+file = { SOI ~ (array | raw_nusmv_chunk)* ~ EOI }
