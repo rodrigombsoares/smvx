@@ -7,15 +7,17 @@ pub struct Program {
 
 #[derive(Debug, Clone)]
 pub enum Chunk {
-    List(ListDef),
+    ListDef(ListDef),
+    ListIdx(ListIdx),
     RawNusmv(String),
 }
 
 impl fmt::Display for Chunk {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Chunk::RawNusmv(raw) => writeln!(f, "{}", raw),
-            Chunk::List(list_def) => write!(f, "{}", list_def),
+            Chunk::RawNusmv(raw) => write!(f, "{}", raw),
+            Chunk::ListDef(list_def) => write!(f, "{}", list_def),
+            Chunk::ListIdx(list_idx) => write!(f, "{}", list_idx),
         }
     }
 }
@@ -34,5 +36,18 @@ impl fmt::Display for ListDef {
             writeln!(f, "{}{} : {};", name, i, element)?;
         }
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ListIdx {
+    pub name: String,
+    pub idx: usize,
+}
+
+impl fmt::Display for ListIdx {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = self.name.strip_suffix('s').unwrap_or(&self.name).to_string();
+        write!(f, "{}{}", name, self.idx)
     }
 }

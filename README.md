@@ -10,7 +10,7 @@ cargo test -- --nocapture
 ## TODO
 ### List
 - [X] Implement definition
-- [ ] Implement indexing
+- [X] Implement indexing
 - [ ] Implement appending
 - [ ] Correct identation on generation
 

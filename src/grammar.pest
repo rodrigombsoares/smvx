@@ -1,18 +1,23 @@
-WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
-COMMENT    = _{ "--" ~ (!"\n" ~ ANY)* }
+// We cannot use the default WHITESPACE and COMMENT rules, we need to handle comments and explicit spacing
+// otherwise nusvm chunks will not be parsed containing trailing \n
+sp = _{ (" " | "\t" | "\r" | comment)* }
+comment = _{ "--" ~ (!"\n" ~ ANY)* }
 
+// List definition
 identifier_char = _{ ASCII_ALPHANUMERIC | "_" }
-list_name        = @{ identifier_char+ }
+list_name       = @{ identifier_char+ }
 
-// Atomic list rule: whitespace within it is explicitly defined or controlled
-list = { list_name ~ ":=" ~ list_val ~ ";" }
-
+list = { sp ~ list_name ~ sp ~ ":=" ~ sp ~ list_val ~ sp ~ ";" }
 list_element = { (!("[" | "]" | "," | ";") ~ ANY)+ }
 
 list_val = {
-    "[" ~ "]" |
-    "[" ~ list_element ~ ("," ~ list_element)* ~ "]"
+    "[" ~ sp ~ "]" |
+    "[" ~ sp ~ list_element ~ (sp ~ "," ~ sp ~ list_element)* ~ sp ~ "]"
 }
+
+// List indexing
+list_idx = { ASCII_DIGIT+ }
+list_indexing = { sp ~ list_name ~ sp ~ "[" ~ sp ~ list_idx ~ sp ~ "]" }
 
 // Single non-list character
 raw_char = _{ !list ~ ANY }
@@ -20,4 +25,4 @@ raw_char = _{ !list ~ ANY }
 // Silent atomic chunk to avoid polluting AST with hundreds of individual raw_char pairs
 raw_nusmv_chunk = { raw_char+ }
 
-program = { SOI ~ (list | raw_nusmv_chunk)* ~ EOI }
+program = { SOI ~ (list | raw_nusmv_chunk | list_indexing)* ~ EOI }

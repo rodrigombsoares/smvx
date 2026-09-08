@@ -1,4 +1,4 @@
-use smvx::parser::parse_program; // Assumes your crate name in Cargo.toml is nusmv_ext
+use smvx::parser::parse_program;
 use smvx::codegen::generate_smv;
 
 #[test]
