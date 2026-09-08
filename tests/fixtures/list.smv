@@ -1,0 +1,20 @@
+-- Standard nusmv code used as a baseline example
+-- for the list syntax of smvx extension
+MODULE main
+VAR
+  -- Because the arguments differ (TRUE vs FALSE), standard NuSMV 
+  -- cannot use its built-in array declaration. You must declare each manually.
+  server0 : server_node(TRUE);
+  server1 : server_node(FALSE);
+  server2 : server_node(FALSE);
+
+SPEC
+  -- Checking that at least one server is always active
+  AG (server0.active | server1.active | server2.active)
+
+MODULE server_node(is_master)
+VAR
+  active : boolean;
+ASSIGN
+  init(active) := is_master;
+  next(active) := active; -- simplified logic
