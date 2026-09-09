@@ -11,8 +11,8 @@ cargo test -- --nocapture
 ### List
 - [X] Implement definition
 - [X] Implement indexing
-- [ ] Implement appending
-- [ ] Correct identation on generation
+- [X] Implement appending
+- [ ] Correct identation and line breaks
 
 ### For loops
 - [ ] Implement definition

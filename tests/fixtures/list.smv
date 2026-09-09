@@ -7,10 +7,11 @@ VAR
   server0 : server_node(TRUE);
   server1 : server_node(FALSE);
   server2 : server_node(FALSE);
+  server3 : server_node(FALSE);
 
 SPEC
   -- Checking that at least one server is always active
-  AG (server0.active | server1.active | server2.active)
+  AG (server0.active | server1.active | server2.active | server3.active)
 
 MODULE server_node(is_master)
 VAR

@@ -1,10 +1,18 @@
-use crate::ast::{Program};
+use crate::ir::{LoweredProgram, LoweredChunk};
 
-pub fn generate_smv(program: &Program) -> String {
+pub fn generate_smv(ir: &LoweredProgram) -> String {
     let mut output = String::new();
     
-    for chunk in &program.chunks {
-        output.push_str(&chunk.to_string());
+    for chunk in &ir.chunks {
+        match chunk {
+            LoweredChunk::Raw(raw) => output.push_str(raw),
+            LoweredChunk::VarDecl { name, value } => {
+                output.push_str(&format!("{} : {};\n", name, value));
+            }
+            LoweredChunk::VarRef(ref_name) => {
+                output.push_str(ref_name);
+            }
+        }
     }
 
     output

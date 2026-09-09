@@ -2,11 +2,12 @@
 MODULE main
 VAR
   servers := [server_node(TRUE), server_node(FALSE), server_node(FALSE)];
+  servers.append(server_node(FALSE));
 
 SPEC
   -- This also implies your parser could eventually map standard array indexing
   -- to the underlying generated variables.
-  AG (servers[0].active | servers[1].active | servers[2].active)
+  AG (servers[0].active | servers[1].active | servers[2].active | servers[3].active)
 
 MODULE server_node(is_master)
 VAR

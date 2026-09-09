@@ -7,7 +7,7 @@ comment = _{ "--" ~ (!"\n" ~ ANY)* }
 identifier_char = _{ ASCII_ALPHANUMERIC | "_" }
 list_name       = @{ identifier_char+ }
 
-list = { sp ~ list_name ~ sp ~ ":=" ~ sp ~ list_val ~ sp ~ ";" }
+list = { list_name ~ sp ~ ":=" ~ sp ~ list_val ~ sp ~ ";"}
 list_element = { (!("[" | "]" | "," | ";") ~ ANY)+ }
 
 list_val = {
@@ -17,12 +17,22 @@ list_val = {
 
 // List indexing
 list_idx = { ASCII_DIGIT+ }
-list_indexing = { sp ~ list_name ~ sp ~ "[" ~ sp ~ list_idx ~ sp ~ "]" }
+list_indexing = { list_name ~ sp ~ "[" ~ sp ~ list_idx ~ sp ~ "]" }
+
+// List appending
+// List appending with nested parenthesis support
+append_arg = _{
+    "(" ~ append_arg* ~ ")" |
+    (!("(" | ")" | ";") ~ ANY)
+}
+append_element = { append_arg+ }
+
+list_append = { list_name ~ "." ~ "append" ~ "(" ~ sp ~ append_element ~ sp ~ ")" ~ ";" }
 
 // Single non-list character
-raw_char = _{ !list ~ ANY }
+raw_char = _{ !(list | list_indexing | list_append) ~ ANY }
 
 // Silent atomic chunk to avoid polluting AST with hundreds of individual raw_char pairs
 raw_nusmv_chunk = { raw_char+ }
 
-program = { SOI ~ (list | raw_nusmv_chunk | list_indexing)* ~ EOI }
+program = { SOI ~ (list | list_indexing | list_append | raw_nusmv_chunk)* ~ EOI }

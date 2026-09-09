@@ -5,7 +5,7 @@ use pest::Parser;
 use pest::error::Error;
 use pest_derive::Parser;
 
-use crate::ast::{Program, Chunk, ListDef, ListIdx};
+use crate::ast::{Program, Chunk, ListDef, ListIdx, ListAppend};
 
 
 #[derive(Parser)]
@@ -28,6 +28,9 @@ pub fn parse_program<P: AsRef<Path>>(file_path: P) -> Result<Program, Error<Rule
             }
             Rule::list_indexing => {
                 chunks.push(Chunk::ListIdx(parse_list_indexing(chunk_pair)?));
+            }
+            Rule::list_append => {
+                chunks.push(Chunk::ListAppend(parse_list_append(chunk_pair)?));
             }
             Rule::raw_nusmv_chunk => {
                 chunks.push(Chunk::RawNusmv(chunk_pair.as_str().to_string()));
@@ -58,4 +61,12 @@ fn parse_list_indexing(pair: pest::iterators::Pair<Rule>) -> Result<ListIdx, Err
     let idx = inner.next().unwrap().as_str().parse::<usize>().unwrap();
 
     Ok(ListIdx { name, idx })
+}
+
+fn parse_list_append(pair: pest::iterators::Pair<Rule>) -> Result<ListAppend, Error<Rule>> {
+    let mut inner = pair.into_inner();
+    let name = inner.next().unwrap().as_str().to_string();
+    let element = inner.next().unwrap().as_str().to_string();
+
+    Ok(ListAppend { name, element })
 }
