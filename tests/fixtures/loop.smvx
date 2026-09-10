@@ -1,0 +1,18 @@
+MODULE main
+VAR
+  pos : {A1, A2, A3}; -- Unrelated, to test } conflict
+  bits := [counter_cell(TRUE)];
+  for i := 1..2 do
+    bits.append(counter_cell(bits[1]));
+  od;
+SPEC
+  AG AF bits[2].carry_out
+
+MODULE counter_cell(carry_in)
+VAR
+  value : boolean;
+ASSIGN
+  init(value) := FALSE;
+  next(value) := value xor carry_in;
+DEFINE
+  carry_out := value & carry_in;

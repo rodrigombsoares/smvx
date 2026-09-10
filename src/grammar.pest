@@ -3,11 +3,12 @@
 sp = _{ (" " | "\t" | "\r" | comment)* }
 comment = _{ "--" ~ (!"\n" ~ ANY)* }
 
-// List definition
+// Identifiers
 identifier_char = _{ ASCII_ALPHANUMERIC | "_" }
 list_name       = @{ identifier_char+ }
 
-list = { list_name ~ sp ~ ":=" ~ sp ~ list_val ~ sp ~ ";"}
+// List definition
+list = { list_name ~ sp ~ ":=" ~ sp ~ list_val ~ sp ~ ";" }
 list_element = { (!("[" | "]" | "," | ";") ~ ANY)+ }
 
 list_val = {
@@ -15,24 +16,39 @@ list_val = {
     "[" ~ sp ~ list_element ~ (sp ~ "," ~ sp ~ list_element)* ~ sp ~ "]"
 }
 
-// List indexing
-list_idx = { ASCII_DIGIT+ }
+// List indexing (allows expressions like 'i-1' or '0')
+list_idx = { (!"]" ~ ANY)+ }
 list_indexing = { list_name ~ sp ~ "[" ~ sp ~ list_idx ~ sp ~ "]" }
 
-// List appending
-// List appending with nested parenthesis support
-append_arg = _{
-    "(" ~ append_arg* ~ ")" |
-    (!("(" | ")" | ";") ~ ANY)
+// Lookaheads
+list_idx_lookahead     = @{ list_name ~ sp ~ "[" }
+list_lookahead         = @{ list_name ~ sp ~ ":=" }
+list_append_lookahead  = @{ list_name ~ sp ~ "." ~ sp ~ "append" }
+for_lookahead          = @{ "for" ~ sp ~ identifier_char+ ~ sp ~ ":=" }
+od_lookahead           = _{ "od" ~ sp ~ ";" }
+
+// Lookahead to ensure parens contain a '[' before matching as dynamic
+dyn_lookahead = _{ (!")" ~ ANY)* ~ "[" }
+
+// Dynamic Constructor (Matches only if '[' is present inside parens)
+constructor_name = @{ identifier_char+ }
+dyn_constructor  = { 
+    constructor_name ~ sp ~ 
+    &("(" ~ dyn_lookahead) ~ 
+    "(" ~ sp ~ arg_expr* ~ sp ~ ")" 
 }
-append_element = { append_arg+ }
 
-list_append = { list_name ~ "." ~ "append" ~ "(" ~ sp ~ append_element ~ sp ~ ")" ~ ";" }
+// Append and Argument structures
+arg_chunk = @{ (!("(" | ")" | ";" | list_idx_lookahead) ~ ANY)+ }
+paren_expr = { "(" ~ sp ~ arg_expr* ~ sp ~ ")" }
+arg_expr = _{ list_indexing | paren_expr | arg_chunk }
 
-// Single non-list character
-raw_char = _{ !(list | list_indexing | list_append) ~ ANY }
+append_element = { dyn_constructor | arg_expr+ }
+list_append = { list_name ~ sp ~ "." ~ sp ~ "append" ~ sp ~ "(" ~ sp ~ append_element ~ sp ~ ")" ~ sp ~ ";" }
 
-// Silent atomic chunk to avoid polluting AST with hundreds of individual raw_char pairs
+// Raw NuSMV Chunk Catch-All
+raw_char = _{ !(list_lookahead | list_idx_lookahead | list_append_lookahead | dyn_constructor) ~ ANY }
 raw_nusmv_chunk = { raw_char+ }
 
-program = { SOI ~ (list | list_indexing | list_append | raw_nusmv_chunk)* ~ EOI }
+// SMVX Program
+program = { SOI ~ ( list | list_indexing | list_append | dyn_constructor | raw_nusmv_chunk)* ~ EOI }

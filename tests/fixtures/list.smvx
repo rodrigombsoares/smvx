@@ -3,6 +3,9 @@ MODULE main
 VAR
   servers := [server_node(TRUE), server_node(FALSE), server_node(FALSE)];
   servers.append(server_node(FALSE));
+  servers.append(server_node(servers[0].active));
+  
+  master_server : server_node(servers[0].active);
 
 SPEC
   -- This also implies your parser could eventually map standard array indexing

@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, Clone)]
 pub struct Program {
     pub chunks: Vec<Chunk>,
@@ -8,6 +10,7 @@ pub enum Chunk {
     ListDef(ListDef),
     ListIdx(ListIdx),
     ListAppend(ListAppend),
+    DynConstructor(DynConstructor),
     RawNusmv(String),
 }
 
@@ -26,5 +29,24 @@ pub struct ListIdx {
 #[derive(Debug, Clone)]
 pub struct ListAppend {
     pub name: String,
-    pub element: String,
+    pub element: AppendElement, 
+}
+
+#[derive(Debug, Clone)]
+pub enum AppendElement {
+    DynConstructor(DynConstructor),
+    Exprs(Vec<ArgExpr>), 
+}
+
+#[derive(Debug, Clone)]
+pub struct DynConstructor {
+    pub name: String,
+    pub args: Vec<ArgExpr>,
+}
+
+#[derive(Debug, Clone)]
+pub enum ArgExpr {
+    ListIdx(ListIdx),          
+    Paren(Vec<ArgExpr>),       
+    Chunk(String),             
 }

@@ -14,5 +14,12 @@ cargo test -- --nocapture
 - [X] Implement appending
 - [ ] Correct identation and line breaks
 
+### Dynamic
+- [X] Implement dynamic constructors (ie: `server_node(servers[0])`)
+
 ### For loops
 - [ ] Implement definition
+- [ ] Fix list indexing to accept variables
+
+### General
+- [ ] Error handling

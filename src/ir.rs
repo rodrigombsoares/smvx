@@ -1,6 +1,6 @@
 // ir.rs
 use std::collections::HashMap;
-use crate::ast::{Program, Chunk};
+use crate::ast::{Program, Chunk, ArgExpr, AppendElement, DynConstructor};
 
 // 1. The IR Data Structures
 #[derive(Debug, Clone)]
@@ -15,7 +15,8 @@ pub enum LoweredChunk {
     VarRef(String),                          // Flattened references
 }
 
-// 2. The Transformation Logic (Stateful)
+// lower holds transformation logic to convert the AST into a flattened IR representation. 
+// TODO: proper error handling, not panic
 pub fn lower(ast: Program) -> LoweredProgram {
     let mut lowered_chunks = Vec::new();
     let mut list_lengths: HashMap<String, usize> = HashMap::new();
@@ -37,30 +38,75 @@ pub fn lower(ast: Program) -> LoweredProgram {
                 }
             }
             Chunk::ListAppend(append) => {
-                let name = append.name.strip_suffix('s').unwrap_or(&append.name).to_string();
+                let name = singular(&append.name);
                 if let Some(&length) = list_lengths.get(&name) {
                     let var_name = format!("{}{}", name, length);
+                    let value = render_append_element(&append.element, &list_lengths);
                     lowered_chunks.push(LoweredChunk::VarDecl { 
                         name: var_name, 
-                        value: append.element,
+                        value,
                     });
-                    list_lengths.insert(append.name.clone(), length + 1);
+                    list_lengths.insert(name, length + 1);
                 } else {
                     panic!("List {} not defined before append", append.name);
                 }
             }
             Chunk::ListIdx(idx) => {
-                let name = idx.name.strip_suffix('s').unwrap_or(&idx.name).to_string();
+                let name = singular(&idx.name);
                 // TODO: check lenght (index out of range)
-                if let Some(&length) = list_lengths.get(&name) {
-                    let var_name = format!("{}{}", idx.name, idx.idx);
+                if let Some(&_length) = list_lengths.get(&name) {
+                    let var_name = format!("{}{}", name, idx.idx);
                     lowered_chunks.push(LoweredChunk::VarRef(var_name));
                 } else {
                     panic!("List {} not defined before indexing", idx.name);
                 }
             }
+            Chunk::DynConstructor(dc) => {
+                let rendered = render_dyn_constructor(&dc, &list_lengths);
+                lowered_chunks.push(LoweredChunk::Raw(rendered));
+            }
         }
     }
 
     LoweredProgram { chunks: lowered_chunks }
+}
+
+// render_dyn_constructor flattens a dynamic constructor call (e.g. server_node(servers[0].active))
+// into its final NuSMV text.
+fn render_dyn_constructor(dc: &DynConstructor, list_lengths: &HashMap<String, usize>) -> String {
+    let args: String = dc.args.iter().map(|a| render_arg_expr(a, list_lengths)).collect();
+    format!("{}({})", dc.name, args)
+}
+
+// render_append_element flattens the value being appended to a list into its final NuSMV text.
+fn render_append_element(element: &AppendElement, list_lengths: &HashMap<String, usize>) -> String {
+    match element {
+        AppendElement::DynConstructor(dc) => render_dyn_constructor(dc, list_lengths),
+        AppendElement::Exprs(exprs) => exprs.iter().map(|e| render_arg_expr(e, list_lengths)).collect(),
+    }
+}
+
+// render_arg_expr resolves an argument of a dynamic constructor into its final NuSMV text,
+// substituting list indexing (e.g. servers[0]) with the flattened variable name (e.g. server0).
+fn render_arg_expr(expr: &ArgExpr, list_lengths: &HashMap<String, usize>) -> String {
+    match expr {
+        ArgExpr::ListIdx(idx) => {
+            // TODO: code duplication here. `Chunk::ListIdx` on lower() uses the same logic. 
+            let name = singular(&idx.name);
+            if !list_lengths.contains_key(&name) {
+                panic!("List {} not defined before indexing", idx.name);
+            }
+            format!("{}{}", name, idx.idx)
+        }
+        ArgExpr::Paren(exprs) => {
+            let inner: String = exprs.iter().map(|e| render_arg_expr(e, list_lengths)).collect();
+            format!("({})", inner)
+        }
+        ArgExpr::Chunk(raw) => raw.clone(),
+    }
+}
+
+// singular helper function strips the trailing 's' used to derive a list's flattened variable prefix.
+fn singular(name: &str) -> String {
+    name.strip_suffix('s').unwrap_or(name).to_string()
 }
