@@ -30,9 +30,15 @@ pub enum IndexExpr {
     Operand(String), // e.g., "0" or "i"
     Math {
         left: String,
-        op: String,
+        op: MathOperator,
         right: String,
     },
+}
+
+#[derive(Debug, Clone)]
+pub enum MathOperator {
+    Add,
+    Sub,
 }
 
 #[derive(Debug, Clone)]

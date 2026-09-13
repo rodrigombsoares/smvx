@@ -5,7 +5,7 @@ use pest::Parser;
 use pest::error::Error;
 use pest_derive::Parser;
 
-use crate::ast::{Program, Chunk, ListDef, ListIdx, ListAppend, DynConstructor, ArgExpr, AppendElement, IndexExpr, Loop};
+use crate::ast::{Program, Chunk, ListDef, ListIdx, ListAppend, DynConstructor, ArgExpr, AppendElement, IndexExpr, Loop, MathOperator};
 
 
 #[derive(Parser)]
@@ -67,7 +67,12 @@ fn parse_index_expr(pair: pest::iterators::Pair<Rule>) -> IndexExpr {
         Rule::index_math => {
             let mut inner = pair.into_inner();
             let left = inner.next().unwrap().as_str().to_string();
-            let op = inner.next().unwrap().as_str().to_string();
+            let op_pair = inner.next().unwrap();
+            let op = match op_pair.as_str() {
+                "+" => MathOperator::Add,
+                "-" => MathOperator::Sub,
+                other => panic!("Unknown operator: {}", other),
+            };
             let right = inner.next().unwrap().as_str().to_string();
             IndexExpr::Math { left, op, right }
         }

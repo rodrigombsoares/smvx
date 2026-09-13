@@ -1,6 +1,6 @@
 // ir.rs
 use std::collections::HashMap;
-use crate::ast::{Program, Chunk, ArgExpr, AppendElement, DynConstructor, IndexExpr, Loop};
+use crate::ast::{Program, Chunk, ArgExpr, AppendElement, DynConstructor, IndexExpr, Loop, MathOperator};
 
 // 1. The IR Data Structures
 #[derive(Debug, Clone)]
@@ -135,10 +135,10 @@ fn evaluate_index(index: &IndexExpr, loop_vars: &HashMap<String, i32>) -> i32 {
         IndexExpr::Math { left, op, right } => {
             let left = operand_value(left, loop_vars);
             let right = operand_value(right, loop_vars);
-            match op.as_str() {
-                "+" => left + right,
-                "-" => left - right,
-                _ => panic!("Unsupported index operator: {}", op),
+            match op {
+                MathOperator::Add => left + right,
+                MathOperator::Sub => left - right,
+                _ => panic!("Unsupported index operator: {:?}", op),
             }
         }
     }
