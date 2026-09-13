@@ -20,10 +20,12 @@ fn test_parse_smvx_list() {
 #[test]
 fn test_parse_smvx_loop() {
     let file_path = "tests/fixtures/loop.smvx";
+    let expected_path = "tests/fixtures/loop.smv";
     let result = parse_program(file_path);
     let lowered = lower(result.unwrap());
     let smv = generate_smv(&lowered);
 
     print!("{}", smv);
     assert!(!smv.is_empty());
+    assert_eq!(smv, std::fs::read_to_string(expected_path).unwrap());
 }

@@ -5,7 +5,7 @@ use pest::Parser;
 use pest::error::Error;
 use pest_derive::Parser;
 
-use crate::ast::{Program, Chunk, ListDef, ListIdx, ListAppend, DynConstructor, ArgExpr, AppendElement, Loop};
+use crate::ast::{Program, Chunk, ListDef, ListIdx, ListAppend, DynConstructor, ArgExpr, AppendElement, IndexExpr, Loop};
 
 
 #[derive(Parser)]
@@ -26,7 +26,7 @@ pub fn parse_program<P: AsRef<Path>>(file_path: P) -> Result<Program, Error<Rule
     }
 
     // debug ast
-    println!("{:#?}", chunks);
+    // println!("{:#?}", chunks);
 
     Ok(Program { chunks })
 }
@@ -56,9 +56,24 @@ fn parse_list(pair: pest::iterators::Pair<Rule>) -> Result<ListDef, Error<Rule>>
 fn parse_list_indexing(pair: pest::iterators::Pair<Rule>) -> Result<ListIdx, Error<Rule>> {
     let mut inner = pair.into_inner();
     let name = inner.next().unwrap().as_str().to_string();
-    let idx = inner.next().unwrap().as_str().parse::<usize>().unwrap();
+    let idx = parse_index_expr(inner.next().unwrap());
 
     Ok(ListIdx { name, idx })
+}
+
+fn parse_index_expr(pair: pest::iterators::Pair<Rule>) -> IndexExpr {
+    match pair.as_rule() {
+        Rule::index_operand => IndexExpr::Operand(pair.as_str().to_string()),
+        Rule::index_math => {
+            let mut inner = pair.into_inner();
+            let left = inner.next().unwrap().as_str().to_string();
+            let op = inner.next().unwrap().as_str().to_string();
+            let right = inner.next().unwrap().as_str().to_string();
+            IndexExpr::Math { left, op, right }
+        }
+        Rule::list_idx => parse_index_expr(pair.into_inner().next().unwrap()),
+        _ => unreachable!("Unexpected rule in index expression: {:?}", pair.as_rule()),
+    }
 }
 
 pub fn parse_list_append(pair: pest::iterators::Pair<Rule>) -> Result<ListAppend, pest::error::Error<Rule>> {
@@ -112,7 +127,7 @@ fn parse_arg_expr(pair: pest::iterators::Pair<Rule>) -> Result<ArgExpr, pest::er
         Rule::list_indexing => {
             let mut inner = pair.into_inner();
             let name = inner.next().unwrap().as_str().to_string(); // list_name
-            let idx = inner.next().unwrap().as_str().parse::<usize>().unwrap();  // list_idx (e.g. "0" or "i-1")
+            let idx = parse_index_expr(inner.next().unwrap());
             
             Ok(ArgExpr::ListIdx(ListIdx { name, idx }))
         }

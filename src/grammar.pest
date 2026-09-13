@@ -17,7 +17,10 @@ list_val = {
 }
 
 // List indexing (allows expressions like 'i-1' or '0')
-list_idx = { (!"]" ~ ANY)+ }
+math_op = { "+" | "-" }
+index_operand = @{ identifier_char+ | ASCII_DIGIT+ }
+index_math = { index_operand ~ sp ~ math_op ~ sp ~ index_operand }
+list_idx = { index_math | index_operand }
 list_indexing = { list_name ~ sp ~ "[" ~ sp ~ list_idx ~ sp ~ "]" }
 
 // --- LOOKAHEADS ---

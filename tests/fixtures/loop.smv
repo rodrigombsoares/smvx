@@ -1,8 +1,15 @@
+-- TODO: Comments with list indexing inside ir are broken
 MODULE main
 VAR
   bit0 : counter_cell(TRUE);
-  bit1 : counter_cell(bit0.carry_out);
-  bit2 : counter_cell(bit1.carry_out);
+
+  
+    bit1 : counter_cell(bit0);
+
+  
+    bit2 : counter_cell(bit1);
+
+  
 SPEC
   AG AF bit2.carry_out
 

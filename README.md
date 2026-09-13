@@ -19,7 +19,13 @@ cargo test -- --nocapture
 
 ### For loops
 - [X] Implement definition
-- [ ] Fix list indexing to accept variables
+- [X] Fix list indexing to accept variables
+
+### Imports
+- [] Import from multiple files
+    - project folder with a main file. Imports will be walked from main.
 
 ### General
+- [ ] Refactor ir.rs context
+- [ ] Refactor ir.rs methods
 - [ ] Rust proper error handling

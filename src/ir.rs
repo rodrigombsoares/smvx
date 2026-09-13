@@ -1,6 +1,6 @@
 // ir.rs
-use std::{collections::HashMap, vec};
-use crate::ast::{Program, Chunk, ArgExpr, AppendElement, DynConstructor, Loop};
+use std::collections::HashMap;
+use crate::ast::{Program, Chunk, ArgExpr, AppendElement, DynConstructor, IndexExpr, Loop};
 
 // 1. The IR Data Structures
 #[derive(Debug, Clone)]
@@ -20,15 +20,20 @@ pub enum LoweredChunk {
 pub fn lower(ast: Program) -> LoweredProgram {
     let mut lowered_chunks = Vec::new();
     let mut list_lengths: HashMap<String, usize> = HashMap::new();
+    let mut loop_vars: HashMap<String, i32> = HashMap::new();
 
     for chunk in ast.chunks {
-        lowered_chunks.extend(lower_chunk(chunk, &mut list_lengths));
+        lowered_chunks.extend(lower_chunk(chunk, &mut list_lengths, &mut loop_vars));
     }
 
     LoweredProgram { chunks: lowered_chunks }
 }
 
-fn lower_chunk(chunk: Chunk, list_lengths: &mut HashMap<String, usize>) -> Vec<LoweredChunk> {
+fn lower_chunk(
+    chunk: Chunk,
+    list_lengths: &mut HashMap<String, usize>,
+    loop_vars: &mut HashMap<String, i32>,
+) -> Vec<LoweredChunk> {
     match chunk {
         Chunk::RawNusmv(raw) => vec![LoweredChunk::Raw(raw)],
         Chunk::ListDef(def) => {
@@ -43,7 +48,7 @@ fn lower_chunk(chunk: Chunk, list_lengths: &mut HashMap<String, usize>) -> Vec<L
             let name = singular(&append.name);
             if let Some(&length) = list_lengths.get(&name) {
                 let var_name = format!("{}{}", name, length);
-                let value = render_append_element(&append.element, list_lengths);
+                let value = render_append_element(&append.element, list_lengths, loop_vars);
                 list_lengths.insert(name.clone(), length + 1);
                 vec![LoweredChunk::VarDecl { name: var_name, value }]
             } else {
@@ -52,68 +57,111 @@ fn lower_chunk(chunk: Chunk, list_lengths: &mut HashMap<String, usize>) -> Vec<L
         }
         Chunk::ListIdx(idx) => {
             let name = singular(&idx.name);
-            if let Some(&_length) = list_lengths.get(&name) {
-                let var_name = format!("{}{}", name, idx.idx);
+            if list_lengths.contains_key(&name) {
+                let index = evaluate_index(&idx.idx, loop_vars);
+                let var_name = format!("{}{}", name, index);
                 vec![LoweredChunk::VarRef(var_name)]
             } else {
                 panic!("List {} not defined before indexing", idx.name);
             }
         }
         Chunk::DynConstructor(dc) => {
-            let rendered = render_dyn_constructor(&dc, list_lengths);
+            let rendered = render_dyn_constructor(&dc, list_lengths, loop_vars);
             vec![LoweredChunk::Raw(rendered)]
         }
-        Chunk::Loop(l) => lower_loop(&l, list_lengths),
-        _ => {
-            panic!("Unsupported chunk type in lower_chunk: {:?}", chunk);
-        }
+        Chunk::Loop(l) => lower_loop(&l, list_lengths, loop_vars),
     }
 }
 
 // render_dyn_constructor flattens a dynamic constructor call (e.g. server_node(servers[0].active))
 // into its final NuSMV text.
-fn render_dyn_constructor(dc: &DynConstructor, list_lengths: &HashMap<String, usize>) -> String {
-    let args: String = dc.args.iter().map(|a| render_arg_expr(a, list_lengths)).collect();
+fn render_dyn_constructor(
+    dc: &DynConstructor,
+    list_lengths: &HashMap<String, usize>,
+    loop_vars: &HashMap<String, i32>,
+) -> String {
+    let args: String = dc.args.iter().map(|a| render_arg_expr(a, list_lengths, loop_vars)).collect();
     format!("{}({})", dc.name, args)
 }
 
 // render_append_element flattens the value being appended to a list into its final NuSMV text.
-fn render_append_element(element: &AppendElement, list_lengths: &HashMap<String, usize>) -> String {
+fn render_append_element(
+    element: &AppendElement,
+    list_lengths: &HashMap<String, usize>,
+    loop_vars: &HashMap<String, i32>,
+) -> String {
     match element {
-        AppendElement::DynConstructor(dc) => render_dyn_constructor(dc, list_lengths),
-        AppendElement::Exprs(exprs) => exprs.iter().map(|e| render_arg_expr(e, list_lengths)).collect(),
+        AppendElement::DynConstructor(dc) => render_dyn_constructor(dc, list_lengths, loop_vars),
+        AppendElement::Exprs(exprs) => exprs.iter().map(|e| render_arg_expr(e, list_lengths, loop_vars)).collect(),
     }
 }
 
 // render_arg_expr resolves an argument of a dynamic constructor into its final NuSMV text,
 // substituting list indexing (e.g. servers[0]) with the flattened variable name (e.g. server0).
-fn render_arg_expr(expr: &ArgExpr, list_lengths: &HashMap<String, usize>) -> String {
+fn render_arg_expr(
+    expr: &ArgExpr,
+    list_lengths: &HashMap<String, usize>,
+    loop_vars: &HashMap<String, i32>,
+) -> String {
     match expr {
+        // TODO: handle list index out of range
         ArgExpr::ListIdx(idx) => {
-            // TODO: code duplication here. `Chunk::ListIdx` on lower() uses the same logic. 
             let name: String = singular(&idx.name);
             if !list_lengths.contains_key(&name) {
                 panic!("List {} not defined before indexing", idx.name);
             }
-            format!("{}{}", name, idx.idx)
+            let index = evaluate_index(&idx.idx, loop_vars);
+            format!("{}{}", name, index)
         }
         ArgExpr::Paren(exprs) => {
-            let inner: String = exprs.iter().map(|e| render_arg_expr(e, list_lengths)).collect();
+            let inner: String = exprs.iter().map(|e| render_arg_expr(e, list_lengths, loop_vars)).collect();
             format!("({})", inner)
         }
         ArgExpr::Chunk(raw) => raw.clone(),
     }
 }
 
-fn lower_loop(l: &Loop, list_lengths: &mut HashMap<String, usize>) -> Vec<LoweredChunk> {
+fn evaluate_index(index: &IndexExpr, loop_vars: &HashMap<String, i32>) -> i32 {
+    fn operand_value(operand: &str, loop_vars: &HashMap<String, i32>) -> i32 {
+        operand.parse::<i32>().unwrap_or_else(|_| {
+            *loop_vars.get(operand).unwrap_or_else(|| {
+                panic!("Unknown loop variable in list index: {}", operand)
+            })
+        })
+    }
+
+    match index {
+        IndexExpr::Operand(operand) => operand_value(operand, loop_vars),
+        IndexExpr::Math { left, op, right } => {
+            let left = operand_value(left, loop_vars);
+            let right = operand_value(right, loop_vars);
+            match op.as_str() {
+                "+" => left + right,
+                "-" => left - right,
+                _ => panic!("Unsupported index operator: {}", op),
+            }
+        }
+    }
+}
+
+fn lower_loop(
+    l: &Loop,
+    list_lengths: &mut HashMap<String, usize>,
+    loop_vars: &mut HashMap<String, i32>,
+) -> Vec<LoweredChunk> {
     let mut lowered_chunks = Vec::new();
     for i in l.start..=l.end {
+        let previous = loop_vars.insert(l.var_name.clone(), i as i32);
         for chunk in &l.body {
-            let mut chunk_clone = chunk.clone();
-            // TODO: fix list assignment with variables
-            // // Replace loop variable with current index in the body
-            // replace_loop_var(&mut chunk_clone, &l.var_name, i);
-            lowered_chunks.extend(lower_chunk(chunk_clone, list_lengths));
+            lowered_chunks.extend(lower_chunk(chunk.clone(), list_lengths, loop_vars));
+        }
+        match previous {
+            Some(value) => {
+                loop_vars.insert(l.var_name.clone(), value);
+            }
+            None => {
+                loop_vars.remove(&l.var_name);
+            }
         }
     }
     lowered_chunks

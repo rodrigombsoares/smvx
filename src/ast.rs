@@ -22,7 +22,17 @@ pub struct ListDef {
 #[derive(Debug, Clone)]
 pub struct ListIdx {
     pub name: String,
-    pub idx: usize,
+    pub idx: IndexExpr,
+}
+
+#[derive(Debug, Clone)]
+pub enum IndexExpr {
+    Operand(String), // e.g., "0" or "i"
+    Math {
+        left: String,
+        op: String,
+        right: String,
+    },
 }
 
 #[derive(Debug, Clone)]
