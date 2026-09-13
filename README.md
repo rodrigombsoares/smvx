@@ -26,6 +26,6 @@ cargo test -- --nocapture
     - project folder with a main file. Imports will be walked from main.
 
 ### General
-- [ ] Refactor ir.rs context
-- [ ] Refactor ir.rs methods
-- [ ] Rust proper error handling
+- [X] Refactor ir.rs context
+- [X] Refactor ir.rs methods
+- [X] Rust proper error handling
