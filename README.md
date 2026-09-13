@@ -18,8 +18,8 @@ cargo test -- --nocapture
 - [X] Implement dynamic constructors (ie: `server_node(servers[0])`)
 
 ### For loops
-- [ ] Implement definition
+- [X] Implement definition
 - [ ] Fix list indexing to accept variables
 
 ### General
-- [ ] Error handling
+- [ ] Rust proper error handling
