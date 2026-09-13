@@ -20,11 +20,12 @@ list_val = {
 list_idx = { (!"]" ~ ANY)+ }
 list_indexing = { list_name ~ sp ~ "[" ~ sp ~ list_idx ~ sp ~ "]" }
 
-// Lookaheads
-list_idx_lookahead     = @{ list_name ~ sp ~ "[" }
-list_lookahead         = @{ list_name ~ sp ~ ":=" }
-list_append_lookahead  = @{ list_name ~ sp ~ "." ~ sp ~ "append" }
-for_lookahead          = @{ "for" ~ sp ~ identifier_char+ ~ sp ~ ":=" }
+// --- LOOKAHEADS ---
+// Look for '[' after ':=' so standard NuSMV DEFINE statements (e.g. carry_out := val) are ignored
+list_lookahead         = _{ list_name ~ sp ~ ":=" ~ sp ~ "[" }
+list_idx_lookahead     = _{ list_name ~ sp ~ "[" }
+list_append_lookahead  = _{ list_name ~ sp ~ "." ~ sp ~ "append" }
+for_lookahead          = _{ "for" ~ sp ~ identifier_char+ ~ sp ~ ":=" }
 od_lookahead           = _{ "od" ~ sp ~ ";" }
 
 // Lookahead to ensure parens contain a '[' before matching as dynamic
@@ -46,9 +47,20 @@ arg_expr = _{ list_indexing | paren_expr | arg_chunk }
 append_element = { dyn_constructor | arg_expr+ }
 list_append = { list_name ~ sp ~ "." ~ sp ~ "append" ~ sp ~ "(" ~ sp ~ append_element ~ sp ~ ")" ~ sp ~ ";" }
 
+// For loops (do ... od;)
+loop_var = @{ identifier_char+ }
+range_start = { ASCII_DIGIT+ }
+range_end = { ASCII_DIGIT+ }
+
+for_loop = { 
+    "for" ~ sp ~ loop_var ~ sp ~ ":=" ~ sp ~ range_start ~ sp ~ ".." ~ sp ~ range_end ~ sp ~ "do" ~ 
+    (for_loop | list | list_indexing | list_append | dyn_constructor | raw_nusmv_chunk)* ~ 
+    "od" ~ sp ~ ";" 
+}
+
 // Raw NuSMV Chunk Catch-All
-raw_char = _{ !(list_lookahead | list_idx_lookahead | list_append_lookahead | dyn_constructor) ~ ANY }
+raw_char = _{ !(list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor) ~ ANY }
 raw_nusmv_chunk = { raw_char+ }
 
 // SMVX Program
-program = { SOI ~ ( list | list_indexing | list_append | dyn_constructor | raw_nusmv_chunk)* ~ EOI }
+program = { SOI ~ (for_loop | list | list_indexing | list_append | dyn_constructor | raw_nusmv_chunk)* ~ EOI }

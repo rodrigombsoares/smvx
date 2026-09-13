@@ -1,6 +1,6 @@
 // ir.rs
 use std::collections::HashMap;
-use crate::ast::{Program, Chunk, ArgExpr, AppendElement, DynConstructor};
+use crate::ast::{Program, Chunk, ArgExpr, AppendElement, DynConstructor, Loop};
 
 // 1. The IR Data Structures
 #[derive(Debug, Clone)]
@@ -65,6 +65,13 @@ pub fn lower(ast: Program) -> LoweredProgram {
                 let rendered = render_dyn_constructor(&dc, &list_lengths);
                 lowered_chunks.push(LoweredChunk::Raw(rendered));
             }
+            Chunk::Loop(l) => {
+                let rendered = render_loop(&l, &list_lengths);
+                lowered_chunks.push(LoweredChunk::Raw(rendered));
+            }
+            _ => {
+                panic!("Unsupported chunk type in lower: {:?}", chunk);
+            }
         }
     }
 
@@ -104,6 +111,11 @@ fn render_arg_expr(expr: &ArgExpr, list_lengths: &HashMap<String, usize>) -> Str
         }
         ArgExpr::Chunk(raw) => raw.clone(),
     }
+}
+
+fn render_loop(l: &Loop, list_lengths: &HashMap<String, usize>) -> String {
+    let mut body = String::new();
+    format!("for {} := {}..{} do\n{}od;", l.var_name, l.start, l.end, body)
 }
 
 // singular helper function strips the trailing 's' used to derive a list's flattened variable prefix.

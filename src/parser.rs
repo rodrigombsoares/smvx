@@ -5,7 +5,7 @@ use pest::Parser;
 use pest::error::Error;
 use pest_derive::Parser;
 
-use crate::ast::{Program, Chunk, ListDef, ListIdx, ListAppend, DynConstructor, ArgExpr, AppendElement};
+use crate::ast::{Program, Chunk, ListDef, ListIdx, ListAppend, DynConstructor, ArgExpr, AppendElement, Loop};
 
 
 #[derive(Parser)]
@@ -22,30 +22,25 @@ pub fn parse_program<P: AsRef<Path>>(file_path: P) -> Result<Program, Error<Rule
     let mut chunks = Vec::new();
     let program_pair = pairs.next().unwrap();
     for chunk_pair in program_pair.into_inner() {
-        match chunk_pair.as_rule() {
-            Rule::list => {
-                chunks.push(Chunk::ListDef(parse_list(chunk_pair)?));
-            }
-            Rule::list_indexing => {
-                chunks.push(Chunk::ListIdx(parse_list_indexing(chunk_pair)?));
-            }
-            Rule::list_append => {
-                chunks.push(Chunk::ListAppend(parse_list_append(chunk_pair)?));
-            }
-            Rule::dyn_constructor => {
-                chunks.push(Chunk::DynConstructor(parse_dyn_constructor(chunk_pair)?));
-            }
-            Rule::raw_nusmv_chunk => {
-                chunks.push(Chunk::RawNusmv(chunk_pair.as_str().to_string()));
-            }
-            _ => {}
-        }
+        chunks.push(parse_chunk(chunk_pair)?);
     }
 
     // debug ast
     println!("{:#?}", chunks);
 
     Ok(Program { chunks })
+}
+
+fn parse_chunk(pair: pest::iterators::Pair<Rule>) -> Result<Chunk, Error<Rule>> {
+    match pair.as_rule() {
+        Rule::list => Ok(Chunk::ListDef(parse_list(pair)?)),
+        Rule::list_indexing => Ok(Chunk::ListIdx(parse_list_indexing(pair)?)),
+        Rule::list_append => Ok(Chunk::ListAppend(parse_list_append(pair)?)),
+        Rule::dyn_constructor => Ok(Chunk::DynConstructor(parse_dyn_constructor(pair)?)),
+        Rule::for_loop => Ok(Chunk::Loop(parse_for_loop(pair)?)),
+        Rule::raw_nusmv_chunk => Ok(Chunk::RawNusmv(pair.as_str().to_string())),
+        _ => Ok(Chunk::RawNusmv(pair.as_str().to_string())),
+    }
 }
 
 fn parse_list(pair: pest::iterators::Pair<Rule>) -> Result<ListDef, Error<Rule>> {
@@ -135,4 +130,23 @@ fn parse_arg_expr(pair: pest::iterators::Pair<Rule>) -> Result<ArgExpr, pest::er
         }
         _ => unreachable!("Unexpected rule in arg_expr: {:?}", pair.as_rule()),
     }
+}
+
+fn parse_for_loop(pair: pest::iterators::Pair<Rule>) -> Result<Loop, pest::error::Error<Rule>> {
+    let mut inner = pair.into_inner();
+    
+    // Get the loop variable name
+    let var_name = inner.next().unwrap().as_str().to_string();
+    
+    // Get the start and end values
+    let start = inner.next().unwrap().as_str().parse::<usize>().unwrap();
+    let end = inner.next().unwrap().as_str().parse::<usize>().unwrap();
+    
+    // Get the body of the loop (a series of chunks)
+    let mut body = Vec::new();
+    for chunk_pair in inner {
+        body.push(parse_chunk(chunk_pair)?);
+    }
+
+    Ok(Loop { var_name, start, end, body })
 }

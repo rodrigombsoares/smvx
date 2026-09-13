@@ -1,8 +1,9 @@
+-- TODO: should extend rule to parse bits i-1 for example
+-- Also, comments with list indexin inside ir are broken
 MODULE main
 VAR
-  pos : {A1, A2, A3}; -- Unrelated, to test } conflict
   bits := [counter_cell(TRUE)];
-  for i := 1..2 do
+  for i := 1..3 do
     bits.append(counter_cell(bits[1]));
   od;
 SPEC

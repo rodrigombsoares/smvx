@@ -1,16 +1,20 @@
--- Standard nusmv code used as a baseline example
--- for the list syntax of smvx extension
+-- Using smvx list syntax in the example
 MODULE main
 VAR
-  -- Because the arguments differ (TRUE vs FALSE), standard NuSMV 
-  -- cannot use its built-in array declaration. You must declare each manually.
   server0 : server_node(TRUE);
-  server1 : server_node(FALSE);
-  server2 : server_node(FALSE);
+server1 : server_node(FALSE);
+server2 : server_node(FALSE);
+
   server3 : server_node(FALSE);
 
+  server4 : server_node(server0.active);
+
+  
+  master_server : server_node(server0.active);
+
 SPEC
-  -- Checking that at least one server is always active
+  -- This also implies your parser could eventually map standard array indexing
+  -- to the underlying generated variables.
   AG (server0.active | server1.active | server2.active | server3.active)
 
 MODULE server_node(is_master)
