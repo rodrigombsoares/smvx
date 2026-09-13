@@ -15,6 +15,7 @@ pub enum Chunk {
 
 #[derive(Debug, Clone)]
 pub struct ListDef {
+    pub indent: String,
     pub name: String,
     pub elements: Vec<String>,
 }
@@ -43,6 +44,7 @@ pub enum MathOperator {
 
 #[derive(Debug, Clone)]
 pub struct ListAppend {
+    pub indent: String,
     pub name: String,
     pub element: AppendElement, 
 }
@@ -68,6 +70,7 @@ pub enum ArgExpr {
 
 #[derive(Debug, Clone)]
 pub struct Loop {
+    pub indent: String,
     pub var_name: String,
     pub start: usize,
     pub end: usize,

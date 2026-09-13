@@ -12,7 +12,7 @@ cargo test -- --nocapture
 - [X] Implement definition
 - [X] Implement indexing
 - [X] Implement appending
-- [ ] Correct identation and line breaks
+- [X] Correct identation and line breaks
 
 ### Dynamic
 - [X] Implement dynamic constructors (ie: `server_node(servers[0])`)

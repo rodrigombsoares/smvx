@@ -45,12 +45,13 @@ fn parse_chunk(pair: pest::iterators::Pair<Rule>) -> Result<Chunk, Error<Rule>> 
 
 fn parse_list(pair: pest::iterators::Pair<Rule>) -> Result<ListDef, Error<Rule>> {
     let mut inner = pair.into_inner();
+    let indent = inner.next().unwrap().as_str().to_string();
     let name = inner.next().unwrap().as_str().to_string();
     
     let element_pairs = inner.next().unwrap().into_inner();
     let elements = element_pairs.map(|e| e.as_str().to_string()).collect();
 
-    Ok(ListDef { name, elements })
+    Ok(ListDef { indent, name, elements })
 }
 
 fn parse_list_indexing(pair: pest::iterators::Pair<Rule>) -> Result<ListIdx, Error<Rule>> {
@@ -84,14 +85,17 @@ fn parse_index_expr(pair: pest::iterators::Pair<Rule>) -> IndexExpr {
 pub fn parse_list_append(pair: pest::iterators::Pair<Rule>) -> Result<ListAppend, pest::error::Error<Rule>> {
     let mut inner = pair.into_inner();
     
-    // 1. Get the list name (e.g., "servers")
+    // Get the indentation (e.g., "  ")
+    let indent = inner.next().unwrap().as_str().to_string();
+
+    // Get the list name (e.g., "servers")
     let name = inner.next().unwrap().as_str().to_string();
     
-    // 2. Pass the append_element Pair to our helper
+    // Pass the append_element Pair to our helper
     let element_pair = inner.next().unwrap(); 
     let element = parse_append_element(element_pair)?;
 
-    Ok(ListAppend { name, element })
+    Ok(ListAppend { indent, name, element })
 }
 
 fn parse_append_element(pair: pest::iterators::Pair<Rule>) -> Result<AppendElement, pest::error::Error<Rule>> {
@@ -155,6 +159,9 @@ fn parse_arg_expr(pair: pest::iterators::Pair<Rule>) -> Result<ArgExpr, pest::er
 fn parse_for_loop(pair: pest::iterators::Pair<Rule>) -> Result<Loop, pest::error::Error<Rule>> {
     let mut inner = pair.into_inner();
     
+    // Get the indentation
+    let indent = inner.next().unwrap().as_str().to_string();
+
     // Get the loop variable name
     let var_name = inner.next().unwrap().as_str().to_string();
     
@@ -168,5 +175,5 @@ fn parse_for_loop(pair: pest::iterators::Pair<Rule>) -> Result<Loop, pest::error
         body.push(parse_chunk(chunk_pair)?);
     }
 
-    Ok(Loop { var_name, start, end, body })
+    Ok(Loop { indent, var_name, start, end, body })
 }

@@ -1,14 +1,18 @@
 // We cannot use the default WHITESPACE and COMMENT rules, we need to handle comments and explicit spacing
 // otherwise nusvm chunks will not be parsed containing trailing \n
-sp = _{ (" " | "\t" | "\r" | comment)* }
-comment = _{ "--" ~ (!"\n" ~ ANY)* }
+ws = _{ " " | "\t" }
+newline = _{ "\r\n" | "\n" }
+comment = _{ "--" ~ (!newline ~ ANY)* }
+sp = _{ (ws | comment)* }
+sp_nl = _{ (ws | newline | comment)* }
+indent = @{ ws* }
 
 // Identifiers
 identifier_char = _{ ASCII_ALPHANUMERIC | "_" }
 list_name       = @{ identifier_char+ }
 
 // List definition
-list = { list_name ~ sp ~ ":=" ~ sp ~ list_val ~ sp ~ ";" }
+list = { indent ~ list_name ~ sp ~ ":=" ~ sp ~ list_val ~ sp ~ ";" ~ (ws* ~ newline)? }
 list_element = { (!("[" | "]" | "," | ";") ~ ANY)+ }
 
 list_val = {
@@ -25,11 +29,11 @@ list_indexing = { list_name ~ sp ~ "[" ~ sp ~ list_idx ~ sp ~ "]" }
 
 // --- LOOKAHEADS ---
 // Look for '[' after ':=' so standard NuSMV DEFINE statements (e.g. carry_out := val) are ignored
-list_lookahead         = _{ list_name ~ sp ~ ":=" ~ sp ~ "[" }
+list_lookahead         = _{ indent ~ list_name ~ sp ~ ":=" ~ sp ~ "[" }
 list_idx_lookahead     = _{ list_name ~ sp ~ "[" }
-list_append_lookahead  = _{ list_name ~ sp ~ "." ~ sp ~ "append" }
-for_lookahead          = _{ "for" ~ sp ~ identifier_char+ ~ sp ~ ":=" }
-od_lookahead           = _{ "od" ~ sp ~ ";" }
+list_append_lookahead  = _{ indent ~ list_name ~ sp ~ "." ~ sp ~ "append" }
+for_lookahead          = _{ indent ~ "for" ~ sp ~ identifier_char+ ~ sp ~ ":=" }
+od_lookahead           = _{ indent ~ "od" ~ sp ~ ";" }
 
 // Lookahead to ensure parens contain a '[' before matching as dynamic
 dyn_lookahead = _{ (!")" ~ ANY)* ~ "[" }
@@ -48,16 +52,17 @@ paren_expr = { "(" ~ sp ~ arg_expr* ~ sp ~ ")" }
 arg_expr = _{ list_indexing | paren_expr | arg_chunk }
 
 append_element = { dyn_constructor | arg_expr+ }
-list_append = { list_name ~ sp ~ "." ~ sp ~ "append" ~ sp ~ "(" ~ sp ~ append_element ~ sp ~ ")" ~ sp ~ ";" }
+list_append = { indent ~ list_name ~ sp ~ "." ~ sp ~ "append" ~ sp ~ "(" ~ sp ~ append_element ~ sp ~ ")" ~ sp ~ ";" ~ (ws* ~ newline)* }
 
 // For loops (do ... od;)
 loop_var = @{ identifier_char+ }
 range_start = { ASCII_DIGIT+ }
 range_end = { ASCII_DIGIT+ }
 
+for_body = _{ for_loop | list | list_indexing | list_append | dyn_constructor | raw_nusmv_chunk }
 for_loop = { 
-    "for" ~ sp ~ loop_var ~ sp ~ ":=" ~ sp ~ range_start ~ sp ~ ".." ~ sp ~ range_end ~ sp ~ "do" ~ 
-    (for_loop | list | list_indexing | list_append | dyn_constructor | raw_nusmv_chunk)* ~ 
+    indent ~ "for" ~ sp ~ loop_var ~ sp ~ ":=" ~ sp ~ range_start ~ sp ~ ".." ~ sp ~ range_end ~ sp ~ "do" ~ sp_nl ~ 
+    (for_body ~ sp_nl)* ~ 
     "od" ~ sp ~ ";" 
 }
 

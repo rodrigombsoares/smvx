@@ -12,8 +12,8 @@ pub struct LoweredProgram {
 #[derive(Debug, Clone)]
 pub enum LoweredChunk {
     Raw(String),
-    VarDecl { name: String, value: String }, // Flattened declarations
-    VarRef(String),                          // Flattened references
+    VarDecl { indent: String, name: String, value: String }, // Flattened declarations
+    VarRef(String),                                          // Flattened references
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,9 +70,10 @@ impl Lowerer {
             Chunk::ListDef(def) => {
                 let name = singular(&def.name);
                 self.list_lengths.insert(name.clone(), def.elements.len());
+                let indent = def.indent;
                 Ok(def.elements.into_iter().enumerate().map(|(i, element)| {
                     let var_name = format!("{}{}", name, i);
-                    LoweredChunk::VarDecl { name: var_name, value: element }
+                    LoweredChunk::VarDecl { indent: indent.clone(), name: var_name, value: element }
                 }).collect::<Vec<_>>())
             }
             Chunk::ListAppend(append) => {
@@ -81,7 +82,7 @@ impl Lowerer {
                     let var_name = format!("{}{}", name, length);
                     let value = self.render_append_element(&append.element)?;
                     self.list_lengths.insert(name.clone(), length + 1);
-                    Ok(vec![LoweredChunk::VarDecl { name: var_name, value }])
+                    Ok(vec![LoweredChunk::VarDecl { indent: append.indent, name: var_name, value }])
                 } else {
                     Err(LowerError::ListNotDefined { name: append.name })
                 }
@@ -184,7 +185,12 @@ impl Lowerer {
         let mut lowered_chunks = Vec::new();
         for i in l.start..=l.end {
             let previous = self.loop_vars.insert(l.var_name.clone(), i as i32);
-            let result = l.body.iter().cloned().try_for_each(|chunk| {
+            let result = l.body.iter().cloned().try_for_each(|mut chunk| {
+                if let Chunk::ListAppend(ref mut append) = chunk {
+                    append.indent = l.indent.clone();
+                } else if let Chunk::ListDef(ref mut def) = chunk {
+                    def.indent = l.indent.clone();
+                }
                 self.lower_chunk(chunk).map(|chunks| lowered_chunks.extend(chunks))
             });
             match previous {

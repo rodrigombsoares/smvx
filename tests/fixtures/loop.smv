@@ -2,14 +2,9 @@
 MODULE main
 VAR
   bit0 : counter_cell(TRUE);
+  bit1 : counter_cell(bit0);
+  bit2 : counter_cell(bit1);
 
-  
-    bit1 : counter_cell(bit0);
-
-  
-    bit2 : counter_cell(bit1);
-
-  
 SPEC
   AG AF bit2.carry_out
 

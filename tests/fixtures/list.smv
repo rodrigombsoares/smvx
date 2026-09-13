@@ -2,14 +2,10 @@
 MODULE main
 VAR
   server0 : server_node(TRUE);
-server1 : server_node(FALSE);
-server2 : server_node(FALSE);
-
+  server1 : server_node(FALSE);
+  server2 : server_node(FALSE);
   server3 : server_node(FALSE);
-
   server4 : server_node(server0.active);
-
-  
   master_server : server_node(server0.active);
 
 SPEC

@@ -6,8 +6,8 @@ pub fn generate_smv(ir: &LoweredProgram) -> String {
     for chunk in &ir.chunks {
         match chunk {
             LoweredChunk::Raw(raw) => output.push_str(raw),
-            LoweredChunk::VarDecl { name, value } => {
-                output.push_str(&format!("{} : {};\n", name, value));
+            LoweredChunk::VarDecl { indent, name, value } => {
+                output.push_str(&format!("{}{} : {};\n", indent, name, value));
             }
             LoweredChunk::VarRef(ref_name) => {
                 output.push_str(ref_name);
