@@ -1,0 +1,6 @@
+MODULE counter_false
+VAR
+  value : boolean;
+ASSIGN
+  init(value) := FALSE;
+  next(value) := value;

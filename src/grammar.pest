@@ -9,7 +9,7 @@ indent = @{ ws* }
 
 // import
 path   = { (ASCII_ALPHANUMERIC | "/" | "." | "_" | "-")+ }
-import_stmt = { "import" ~ sp ~ "\"" ~ path ~ "\"" ~ sp ~ ";" }
+import_stmt = { indent ~ "import" ~ sp ~ "\"" ~ path ~ "\"" ~ sp ~ ";" }
 
 // Identifiers
 identifier_char = _{ ASCII_ALPHANUMERIC | "_" }
@@ -33,6 +33,7 @@ list_indexing = { list_name ~ sp ~ "[" ~ sp ~ list_idx ~ sp ~ "]" }
 
 // --- LOOKAHEADS ---
 // Look for '[' after ':=' so standard NuSMV DEFINE statements (e.g. carry_out := val) are ignored
+import_lookahead       = _{ indent ~ "import" ~ sp ~ "\"" }
 list_lookahead         = _{ indent ~ list_name ~ sp ~ ":=" ~ sp ~ "[" }
 list_idx_lookahead     = _{ list_name ~ sp ~ "[" }
 list_append_lookahead  = _{ indent ~ list_name ~ sp ~ "." ~ sp ~ "append" }
@@ -71,7 +72,7 @@ for_loop = {
 }
 
 // Raw NuSMV Chunk Catch-All
-raw_char = _{ !(list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor) ~ ANY }
+raw_char = _{ !(import_lookahead | list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor) ~ ANY }
 raw_nusmv_chunk = { raw_char+ }
 
 // SMVX Program

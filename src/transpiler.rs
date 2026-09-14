@@ -52,9 +52,15 @@ impl SMVXTranspiler {
             }
         }
 
-        // ad-hoc removal of leading blank lines from the first chunk, if it is a RawNusmv chunk
-        if let Some(Chunk::RawNusmv(raw)) = chunks.first_mut() {
-            *raw = raw.trim_start_matches(['\r', '\n']).to_string();
+        // Clean up leading whitespace/newlines left behind by import statements
+        while let Some(Chunk::RawNusmv(raw)) = chunks.first_mut() {
+            let trimmed = raw.trim_start_matches(['\r', '\n', ' ', '\t']);
+            if trimmed.is_empty() {
+                chunks.remove(0);
+            } else {
+                *raw = trimmed.to_string();
+                break;
+            }
         }
 
         for import_path in import_paths {

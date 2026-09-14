@@ -59,7 +59,7 @@ fn parse_list(pair: pest::iterators::Pair<Rule>) -> Result<ListDef, Error<Rule>>
 
 fn parse_import(pair: pest::iterators::Pair<Rule>) -> Result<ImportStmt, Error<Rule>> {
     let mut inner = pair.into_inner();
-    let path = inner.next().unwrap().as_str().to_string();
+    let path = inner.find(|p| p.as_rule() == Rule::path).unwrap().as_str().to_string();
     Ok(ImportStmt { path })
 }
 

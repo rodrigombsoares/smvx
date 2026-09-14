@@ -23,3 +23,4 @@
 - [X] Refactor ir.rs context
 - [X] Refactor ir.rs methods
 - [X] Rust proper error handling
+- [] If module doesn't end with \n then generated code should add this breaking

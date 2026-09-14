@@ -1,4 +1,5 @@
 import "counter/counter.smvx";
+import "counter_false.smvx";
 
 MODULE main
 VAR

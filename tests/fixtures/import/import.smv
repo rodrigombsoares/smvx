@@ -15,3 +15,10 @@ ASSIGN
   next(value) := value xor carry_in;
 DEFINE
   carry_out := value & carry_in;
+
+MODULE counter_false
+VAR
+  value : boolean;
+ASSIGN
+  init(value) := FALSE;
+  next(value) := value;
