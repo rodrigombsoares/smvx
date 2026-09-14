@@ -36,7 +36,7 @@ list_indexing = { list_name ~ sp ~ "[" ~ sp ~ list_idx ~ sp ~ "]" }
 list_lookahead         = _{ indent ~ list_name ~ sp ~ ":=" ~ sp ~ "[" }
 list_idx_lookahead     = _{ list_name ~ sp ~ "[" }
 list_append_lookahead  = _{ indent ~ list_name ~ sp ~ "." ~ sp ~ "append" }
-for_lookahead          = _{ indent ~ "for" ~ sp ~ identifier_char+ ~ sp ~ ":=" }
+for_lookahead          = _{ indent ~ "for" ~ ws+ ~ identifier_char+ ~ sp ~ ":=" }
 od_lookahead           = _{ indent ~ "od" ~ sp ~ ";" }
 
 // Lookahead to ensure parens contain a '[' before matching as dynamic
@@ -65,7 +65,7 @@ range_end = { ASCII_DIGIT+ }
 
 for_body = _{ for_loop | list | list_indexing | list_append | dyn_constructor | raw_nusmv_chunk }
 for_loop = { 
-    indent ~ "for" ~ sp ~ loop_var ~ sp ~ ":=" ~ sp ~ range_start ~ sp ~ ".." ~ sp ~ range_end ~ sp ~ "do" ~ sp_nl ~ 
+    indent ~ "for" ~ ws+ ~ loop_var ~ sp ~ ":=" ~ sp ~ range_start ~ sp ~ ".." ~ sp ~ range_end ~ sp ~ "do" ~ sp_nl ~ 
     (for_body ~ sp_nl)* ~ 
     "od" ~ sp ~ ";" 
 }
