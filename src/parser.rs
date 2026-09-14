@@ -16,6 +16,7 @@ pub(crate) fn parse_program<P: AsRef<Path>>(file_path: P) -> Result<Program, Err
     let unparsed_file = fs::read_to_string(file_path).expect("cannot read file");
 
     let mut pairs = SMVXParser::parse(Rule::program, &unparsed_file)?;
+    // TODO: debug log here
     // debug the pest tree
     // println!("{:#?}", pairs);
     
@@ -25,6 +26,7 @@ pub(crate) fn parse_program<P: AsRef<Path>>(file_path: P) -> Result<Program, Err
         chunks.push(parse_chunk(chunk_pair)?);
     }
 
+    // TODO: debug log here
     // debug ast
     // println!("{:#?}", chunks);
 
