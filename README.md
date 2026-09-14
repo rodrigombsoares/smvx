@@ -26,7 +26,7 @@ cargo test -- --nocapture
     - project folder with a main file. Imports will be walked from main.
 
 ### CLI
-- [] Create CLI for transpiler
+- [X] Create CLI for transpiler
 
 ### General
 - [X] Refactor ir.rs context
