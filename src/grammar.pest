@@ -7,6 +7,10 @@ sp = _{ (ws | comment)* }
 sp_nl = _{ (ws | newline | comment)* }
 indent = @{ ws* }
 
+// import
+path   = { (ASCII_ALPHANUMERIC | "/" | "." | "_" | "-")+ }
+import_stmt = { "import" ~ sp ~ "\"" ~ path ~ "\"" ~ sp ~ ";" }
+
 // Identifiers
 identifier_char = _{ ASCII_ALPHANUMERIC | "_" }
 list_name       = @{ identifier_char+ }
@@ -71,4 +75,4 @@ raw_char = _{ !(list_lookahead | list_idx_lookahead | list_append_lookahead | fo
 raw_nusmv_chunk = { raw_char+ }
 
 // SMVX Program
-program = { SOI ~ (for_loop | list | list_indexing | list_append | dyn_constructor | raw_nusmv_chunk)* ~ EOI }
+program = { SOI ~ (for_loop | list | list_indexing | list_append | dyn_constructor | import_stmt | raw_nusmv_chunk)* ~ EOI }

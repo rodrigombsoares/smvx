@@ -1,6 +1,6 @@
 use crate::ir::{LoweredProgram, LoweredChunk};
 
-pub fn generate_smv(ir: &LoweredProgram) -> String {
+pub(crate) fn generate_smv(ir: &LoweredProgram) -> String {
     let mut output = String::new();
     
     for chunk in &ir.chunks {

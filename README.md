@@ -22,8 +22,11 @@ cargo test -- --nocapture
 - [X] Fix list indexing to accept variables
 
 ### Imports
-- [] Import from multiple files
+- [X] Import from multiple files
     - project folder with a main file. Imports will be walked from main.
+
+### CLI
+- [] Create CLI for transpiler
 
 ### General
 - [X] Refactor ir.rs context

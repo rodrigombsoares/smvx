@@ -5,14 +5,14 @@ use pest::Parser;
 use pest::error::Error;
 use pest_derive::Parser;
 
-use crate::ast::{Program, Chunk, ListDef, ListIdx, ListAppend, DynConstructor, ArgExpr, AppendElement, IndexExpr, Loop, MathOperator};
+use crate::ast::{Program, Chunk, ListDef, ListIdx, ListAppend, DynConstructor, ArgExpr, AppendElement, IndexExpr, Loop, MathOperator, ImportStmt};
 
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
-pub struct SMVXParser;
+pub(crate) struct SMVXParser;
 
-pub fn parse_program<P: AsRef<Path>>(file_path: P) -> Result<Program, Error<Rule>> {
+pub(crate) fn parse_program<P: AsRef<Path>>(file_path: P) -> Result<Program, Error<Rule>> {
     let unparsed_file = fs::read_to_string(file_path).expect("cannot read file");
 
     let mut pairs = SMVXParser::parse(Rule::program, &unparsed_file)?;
@@ -33,6 +33,7 @@ pub fn parse_program<P: AsRef<Path>>(file_path: P) -> Result<Program, Error<Rule
 
 fn parse_chunk(pair: pest::iterators::Pair<Rule>) -> Result<Chunk, Error<Rule>> {
     match pair.as_rule() {
+        Rule::import_stmt => Ok(Chunk::Import(parse_import(pair)?)),
         Rule::list => Ok(Chunk::ListDef(parse_list(pair)?)),
         Rule::list_indexing => Ok(Chunk::ListIdx(parse_list_indexing(pair)?)),
         Rule::list_append => Ok(Chunk::ListAppend(parse_list_append(pair)?)),
@@ -52,6 +53,12 @@ fn parse_list(pair: pest::iterators::Pair<Rule>) -> Result<ListDef, Error<Rule>>
     let elements = element_pairs.map(|e| e.as_str().to_string()).collect();
 
     Ok(ListDef { indent, name, elements })
+}
+
+fn parse_import(pair: pest::iterators::Pair<Rule>) -> Result<ImportStmt, Error<Rule>> {
+    let mut inner = pair.into_inner();
+    let path = inner.next().unwrap().as_str().to_string();
+    Ok(ImportStmt { path })
 }
 
 fn parse_list_indexing(pair: pest::iterators::Pair<Rule>) -> Result<ListIdx, Error<Rule>> {
@@ -82,7 +89,7 @@ fn parse_index_expr(pair: pest::iterators::Pair<Rule>) -> IndexExpr {
     }
 }
 
-pub fn parse_list_append(pair: pest::iterators::Pair<Rule>) -> Result<ListAppend, pest::error::Error<Rule>> {
+pub(crate) fn parse_list_append(pair: pest::iterators::Pair<Rule>) -> Result<ListAppend, pest::error::Error<Rule>> {
     let mut inner = pair.into_inner();
     
     // Get the indentation (e.g., "  ")

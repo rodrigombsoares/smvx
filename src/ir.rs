@@ -5,19 +5,19 @@ use std::error::Error;
 use crate::ast::{Program, Chunk, ArgExpr, AppendElement, DynConstructor, IndexExpr, Loop, MathOperator};
 
 #[derive(Debug, Clone)]
-pub struct LoweredProgram {
-    pub chunks: Vec<LoweredChunk>,
+pub(crate) struct LoweredProgram {
+    pub(crate) chunks: Vec<LoweredChunk>,
 }
 
 #[derive(Debug, Clone)]
-pub enum LoweredChunk {
+pub(crate) enum LoweredChunk {
     Raw(String),
     VarDecl { indent: String, name: String, value: String }, // Flattened declarations
     VarRef(String),                                          // Flattened references
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum LowerError {
+pub(crate) enum LowerError {
     ListNotDefined { name: String },
     IndexOutOfBounds { list: String, index: i32, length: usize },
     UnknownLoopVariable { name: String },
@@ -41,20 +41,20 @@ impl Error for LowerError {}
 
 // Lower does the lowering process, transforming the AST into a flattened IR representation.
 // stores the current state of list lengths and loop variables during the lowering process.
-pub struct Lowerer {
+pub(crate) struct Lowerer {
     list_lengths: HashMap<String, usize>,
     loop_vars: HashMap<String, i32>,
 }
 
 impl Lowerer {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Lowerer {
             list_lengths: HashMap::new(),
             loop_vars: HashMap::new(),
         }
     }
 
-    pub fn lower(mut self, ast: Program) -> Result<LoweredProgram, LowerError> {
+    pub(crate) fn lower(mut self, ast: Program) -> Result<LoweredProgram, LowerError> {
         let mut lowered_chunks = Vec::new();
 
         for chunk in ast.chunks {
@@ -103,6 +103,10 @@ impl Lowerer {
                 Ok(vec![LoweredChunk::Raw(rendered)])
             }
             Chunk::Loop(l) => self.lower_loop(&l),
+            Chunk::Import(_) => {
+                // Imports are handled in the transpiler, so we can ignore them here.
+                Ok(vec![])
+            }
         }
     }
 

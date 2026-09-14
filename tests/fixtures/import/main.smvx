@@ -1,0 +1,10 @@
+import "counter/counter.smvx";
+
+MODULE main
+VAR
+  bits := [counter_cell(TRUE)];
+  for i := 1..2 do
+    bits.append(counter_cell(bits[i-1]));
+  od;
+SPEC
+  AG AF bits[2].carry_out

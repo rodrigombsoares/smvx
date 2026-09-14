@@ -1,0 +1,8 @@
+MODULE counter_cell(carry_in)
+VAR
+  value : boolean;
+ASSIGN
+  init(value) := FALSE;
+  next(value) := value xor carry_in;
+DEFINE
+  carry_out := value & carry_in;

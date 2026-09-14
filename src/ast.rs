@@ -1,10 +1,11 @@
 #[derive(Debug, Clone)]
-pub struct Program {
-    pub chunks: Vec<Chunk>,
+pub(crate) struct Program {
+    pub(crate) chunks: Vec<Chunk>,
 }
 
 #[derive(Debug, Clone)]
-pub enum Chunk {
+pub(crate) enum Chunk {
+    Import(ImportStmt),
     ListDef(ListDef),
     ListIdx(ListIdx),
     ListAppend(ListAppend),
@@ -14,20 +15,25 @@ pub enum Chunk {
 }
 
 #[derive(Debug, Clone)]
-pub struct ListDef {
-    pub indent: String,
-    pub name: String,
-    pub elements: Vec<String>,
+pub(crate) struct ImportStmt {
+    pub(crate) path: String,
 }
 
 #[derive(Debug, Clone)]
-pub struct ListIdx {
-    pub name: String,
-    pub idx: IndexExpr,
+pub(crate) struct ListDef {
+    pub(crate) indent: String,
+    pub(crate) name: String,
+    pub(crate) elements: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
-pub enum IndexExpr {
+pub(crate) struct ListIdx {
+    pub(crate) name: String,
+    pub(crate) idx: IndexExpr,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum IndexExpr {
     Operand(String), // e.g., "0" or "i"
     Math {
         left: String,
@@ -37,42 +43,42 @@ pub enum IndexExpr {
 }
 
 #[derive(Debug, Clone)]
-pub enum MathOperator {
+pub(crate) enum MathOperator {
     Add,
     Sub,
 }
 
 #[derive(Debug, Clone)]
-pub struct ListAppend {
-    pub indent: String,
-    pub name: String,
-    pub element: AppendElement, 
+pub(crate) struct ListAppend {
+    pub(crate) indent: String,
+    pub(crate) name: String,
+    pub(crate) element: AppendElement, 
 }
 
 #[derive(Debug, Clone)]
-pub enum AppendElement {
+pub(crate) enum AppendElement {
     DynConstructor(DynConstructor),
     Exprs(Vec<ArgExpr>), 
 }
 
 #[derive(Debug, Clone)]
-pub struct DynConstructor {
-    pub name: String,
-    pub args: Vec<ArgExpr>,
+pub(crate) struct DynConstructor {
+    pub(crate) name: String,
+    pub(crate) args: Vec<ArgExpr>,
 }
 
 #[derive(Debug, Clone)]
-pub enum ArgExpr {
+pub(crate) enum ArgExpr {
     ListIdx(ListIdx),          
     Paren(Vec<ArgExpr>),       
     Chunk(String),             
 }
 
 #[derive(Debug, Clone)]
-pub struct Loop {
-    pub indent: String,
-    pub var_name: String,
-    pub start: usize,
-    pub end: usize,
-    pub body: Vec<Chunk>,
+pub(crate) struct Loop {
+    pub(crate) indent: String,
+    pub(crate) var_name: String,
+    pub(crate) start: usize,
+    pub(crate) end: usize,
+    pub(crate) body: Vec<Chunk>,
 }
