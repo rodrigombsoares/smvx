@@ -5,6 +5,7 @@ pub(crate) struct Program {
 
 #[derive(Debug, Clone)]
 pub(crate) enum Chunk {
+    Global(Vec<GlobalDecl>),
     Import(ImportStmt),
     ListDef(ListDef),
     ListIdx(ListIdx),
@@ -78,7 +79,19 @@ pub(crate) enum ArgExpr {
 pub(crate) struct Loop {
     pub(crate) indent: String,
     pub(crate) var_name: String,
-    pub(crate) start: usize,
-    pub(crate) end: usize,
+    pub(crate) start: RangeBound,
+    pub(crate) end: RangeBound,
     pub(crate) body: Vec<Chunk>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum RangeBound {
+    Number(i64),
+    Variable(String),
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct GlobalDecl {
+    pub(crate) name: String,
+    pub(crate) value: i64,
 }

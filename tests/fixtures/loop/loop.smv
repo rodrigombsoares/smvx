@@ -1,4 +1,7 @@
 -- TODO: Comments with list indexing inside ir are broken
+-- TODO: Fix line breaks on global removal
+
+
 MODULE main
 VAR
   bit0 : counter_cell(TRUE);

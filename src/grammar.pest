@@ -7,16 +7,22 @@ sp = _{ (ws | comment)* }
 sp_nl = _{ (ws | newline | comment)* }
 indent = @{ ws* }
 
+// Identifiers
+identifier_char = _{ ASCII_ALPHANUMERIC | "_" }
+var_name       = @{ identifier_char+ }
+number = { ASCII_DIGIT+ }
+
 // import
 path   = { (ASCII_ALPHANUMERIC | "/" | "." | "_" | "-")+ }
 import_stmt = { indent ~ "import" ~ sp ~ "\"" ~ path ~ "\"" ~ sp ~ ";" }
 
-// Identifiers
-identifier_char = _{ ASCII_ALPHANUMERIC | "_" }
-list_name       = @{ identifier_char+ }
+// Globals
+global_val  = { number }
+global_decl = { sp_nl ~ var_name ~ sp ~ ":" ~ sp ~ global_val ~ sp ~ ";" }
+global_block = { "GLOBAL" ~ sp_nl ~ global_decl* }
 
 // List definition
-list = { indent ~ list_name ~ sp ~ ":=" ~ sp ~ list_val ~ sp ~ ";" ~ (ws* ~ newline)? }
+list = { indent ~ var_name ~ sp ~ ":=" ~ sp ~ list_val ~ sp ~ ";" ~ (ws* ~ newline)? }
 list_element = { (!("[" | "]" | "," | ";") ~ ANY)+ }
 
 list_val = {
@@ -29,19 +35,17 @@ math_op = { "+" | "-" }
 index_operand = @{ identifier_char+ | ASCII_DIGIT+ }
 index_math = { index_operand ~ sp ~ math_op ~ sp ~ index_operand }
 list_idx = { index_math | index_operand }
-list_indexing = { list_name ~ sp ~ "[" ~ sp ~ list_idx ~ sp ~ "]" }
+list_indexing = { var_name ~ sp ~ "[" ~ sp ~ list_idx ~ sp ~ "]" }
 
 // --- LOOKAHEADS ---
-// Look for '[' after ':=' so standard NuSMV DEFINE statements (e.g. carry_out := val) are ignored
 import_lookahead       = _{ indent ~ "import" ~ sp ~ "\"" }
-list_lookahead         = _{ indent ~ list_name ~ sp ~ ":=" ~ sp ~ "[" }
-list_idx_lookahead     = _{ list_name ~ sp ~ "[" }
-list_append_lookahead  = _{ indent ~ list_name ~ sp ~ "." ~ sp ~ "append" }
+list_lookahead         = _{ indent ~ var_name ~ sp ~ ":=" ~ sp ~ "[" }
+list_idx_lookahead     = _{ var_name ~ sp ~ "[" }
+list_append_lookahead  = _{ indent ~ var_name ~ sp ~ "." ~ sp ~ "append" }
 for_lookahead          = _{ indent ~ "for" ~ ws+ ~ identifier_char+ ~ sp ~ ":=" }
 od_lookahead           = _{ indent ~ "od" ~ sp ~ ";" }
-
-// Lookahead to ensure parens contain a '[' before matching as dynamic
-dyn_lookahead = _{ (!")" ~ ANY)* ~ "[" }
+global_lookahead       = _{ "GLOBAL" ~ sp }
+dyn_lookahead = _{ (!")" ~ ANY)* ~ "[" } // Lookahead to ensure parens contain a '[' before matching as dynamic
 
 // Dynamic Constructor (Matches only if '[' is present inside parens)
 constructor_name = @{ identifier_char+ }
@@ -57,12 +61,12 @@ paren_expr = { "(" ~ sp ~ arg_expr* ~ sp ~ ")" }
 arg_expr = _{ list_indexing | paren_expr | arg_chunk }
 
 append_element = { dyn_constructor | arg_expr+ }
-list_append = { indent ~ list_name ~ sp ~ "." ~ sp ~ "append" ~ sp ~ "(" ~ sp ~ append_element ~ sp ~ ")" ~ sp ~ ";" ~ (ws* ~ newline)* }
+list_append = { indent ~ var_name ~ sp ~ "." ~ sp ~ "append" ~ sp ~ "(" ~ sp ~ append_element ~ sp ~ ")" ~ sp ~ ";" ~ (ws* ~ newline)* }
 
 // For loops (do ... od;)
 loop_var = @{ identifier_char+ }
-range_start = { ASCII_DIGIT+ }
-range_end = { ASCII_DIGIT+ }
+range_start = { number | var_name}
+range_end = { number | var_name}
 
 for_body = _{ for_loop | list | list_indexing | list_append | dyn_constructor | raw_nusmv_chunk }
 for_loop = { 
@@ -72,8 +76,8 @@ for_loop = {
 }
 
 // Raw NuSMV Chunk Catch-All
-raw_char = _{ !(import_lookahead | list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor) ~ ANY }
+raw_char = _{ !(import_lookahead | list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor | global_lookahead) ~ ANY }
 raw_nusmv_chunk = { raw_char+ }
 
 // SMVX Program
-program = { SOI ~ (for_loop | list | list_indexing | list_append | dyn_constructor | import_stmt | raw_nusmv_chunk)* ~ EOI }
+program = { SOI ~ (global_block | for_loop | list | list_indexing | list_append | dyn_constructor | import_stmt | raw_nusmv_chunk)* ~ EOI }

@@ -2,7 +2,11 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::error::Error;
 
-use crate::ast::{Program, Chunk, ArgExpr, AppendElement, DynConstructor, IndexExpr, Loop, MathOperator};
+use crate::ast::{
+    Program, Chunk, ArgExpr, AppendElement, 
+    DynConstructor, IndexExpr, Loop, MathOperator,
+    RangeBound
+};
 
 #[derive(Debug, Clone)]
 pub(crate) struct LoweredProgram {
@@ -44,6 +48,7 @@ impl Error for LowerError {}
 pub(crate) struct Lowerer {
     list_lengths: HashMap<String, usize>,
     loop_vars: HashMap<String, i32>,
+    global_vars: HashMap<String, i64>,
 }
 
 impl Lowerer {
@@ -51,6 +56,7 @@ impl Lowerer {
         Lowerer {
             list_lengths: HashMap::new(),
             loop_vars: HashMap::new(),
+            global_vars: HashMap::new(),
         }
     }
 
@@ -67,6 +73,12 @@ impl Lowerer {
     fn lower_chunk(&mut self, chunk: Chunk) -> Result<Vec<LoweredChunk>, LowerError> {
         match chunk {
             Chunk::RawNusmv(raw) => Ok(vec![LoweredChunk::Raw(raw)]),
+            Chunk::Global(def) => {
+                for g in def {
+                    self.global_vars.insert(g.name, g.value);
+                }
+                Ok(vec![])
+            }
             Chunk::ListDef(def) => {
                 let name = singular(&def.name);
                 self.list_lengths.insert(name.clone(), def.elements.len());
@@ -187,7 +199,16 @@ impl Lowerer {
 
     fn lower_loop(&mut self, l: &Loop) -> Result<Vec<LoweredChunk>, LowerError> {
         let mut lowered_chunks = Vec::new();
-        for i in l.start..=l.end {
+        let start = match &l.start {
+            RangeBound::Number(val) => *val,
+            RangeBound::Variable(val) => self.global_vars[val],
+        };
+        let end = match &l.end {
+            RangeBound::Number(val) => *val,
+            RangeBound::Variable(val) => self.global_vars[val],
+        };
+
+        for i in start..=end {
             let previous = self.loop_vars.insert(l.var_name.clone(), i as i32);
             let result = l.body.iter().cloned().try_for_each(|mut chunk| {
                 if let Chunk::ListAppend(ref mut append) = chunk {

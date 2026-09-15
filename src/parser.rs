@@ -5,7 +5,12 @@ use pest::Parser;
 use pest::error::Error;
 use pest_derive::Parser;
 
-use crate::ast::{Program, Chunk, ListDef, ListIdx, ListAppend, DynConstructor, ArgExpr, AppendElement, IndexExpr, Loop, MathOperator, ImportStmt};
+use crate::ast::{
+    Program, Chunk, ListDef, ListIdx, ListAppend, 
+    DynConstructor, ArgExpr, AppendElement, 
+    IndexExpr, Loop, MathOperator, ImportStmt,
+    RangeBound, GlobalDecl,
+};
 
 
 #[derive(Parser)]
@@ -35,6 +40,7 @@ pub(crate) fn parse_program<P: AsRef<Path>>(file_path: P) -> Result<Program, Err
 
 fn parse_chunk(pair: pest::iterators::Pair<Rule>) -> Result<Chunk, Error<Rule>> {
     match pair.as_rule() {
+        Rule::global_block => Ok(Chunk::Global(parse_global(pair)?)),
         Rule::import_stmt => Ok(Chunk::Import(parse_import(pair)?)),
         Rule::list => Ok(Chunk::ListDef(parse_list(pair)?)),
         Rule::list_indexing => Ok(Chunk::ListIdx(parse_list_indexing(pair)?)),
@@ -44,6 +50,18 @@ fn parse_chunk(pair: pest::iterators::Pair<Rule>) -> Result<Chunk, Error<Rule>> 
         Rule::raw_nusmv_chunk => Ok(Chunk::RawNusmv(pair.as_str().to_string())),
         _ => Ok(Chunk::RawNusmv(pair.as_str().to_string())),
     }
+}
+
+fn parse_global(pair: pest::iterators::Pair<Rule>) -> Result<Vec<GlobalDecl>, Error<Rule>> {
+    let inner = pair.into_inner();
+    let mut globals = Vec::new();
+    for p in inner.clone() {
+        let mut p_inner = p.into_inner();
+        let name = p_inner.next().unwrap().as_str().to_string();
+        let value = p_inner.next().unwrap().as_str().parse::<i64>().unwrap();
+        globals.push(GlobalDecl { name, value });
+    }
+    Ok(globals)
 }
 
 fn parse_list(pair: pest::iterators::Pair<Rule>) -> Result<ListDef, Error<Rule>> {
@@ -175,8 +193,8 @@ fn parse_for_loop(pair: pest::iterators::Pair<Rule>) -> Result<Loop, pest::error
     let var_name = inner.next().unwrap().as_str().to_string();
     
     // Get the start and end values
-    let start = inner.next().unwrap().as_str().parse::<usize>().unwrap();
-    let end = inner.next().unwrap().as_str().parse::<usize>().unwrap();
+    let start = parse_range_bound(inner.next().unwrap());
+    let end = parse_range_bound(inner.next().unwrap());
     
     // Get the body of the loop (a series of chunks)
     let mut body = Vec::new();
@@ -185,4 +203,13 @@ fn parse_for_loop(pair: pest::iterators::Pair<Rule>) -> Result<Loop, pest::error
     }
 
     Ok(Loop { indent, var_name, start, end, body })
+}
+
+fn parse_range_bound(pair: pest::iterators::Pair<Rule>) -> RangeBound {
+    let pair_str = pair.as_str().to_string();
+    let rule = pair.into_inner().next().unwrap().as_rule();
+    match rule {
+        Rule::var_name => RangeBound::Variable(pair_str),
+        _ => RangeBound::Number(pair_str.parse::<i64>().unwrap()),
+    }
 }

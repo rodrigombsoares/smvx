@@ -1,8 +1,13 @@
 -- TODO: Comments with list indexing inside ir are broken
+-- TODO: Fix line breaks on global removal
+GLOBAL 
+  BITS : 2;
+  UNUSED : 0;
+
 MODULE main
 VAR
   bits := [counter_cell(TRUE)];
-  for i := 1..2 do
+  for i := 1..BITS do
     bits.append(counter_cell(bits[i-1]));
   od;
 SPEC
