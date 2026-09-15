@@ -37,15 +37,8 @@ index_math = { index_operand ~ sp ~ math_op ~ sp ~ index_operand }
 list_idx = { index_math | index_operand }
 list_indexing = { var_name ~ sp ~ "[" ~ sp ~ list_idx ~ sp ~ "]" }
 
-// --- LOOKAHEADS ---
-import_lookahead       = _{ indent ~ "import" ~ sp ~ "\"" }
-list_lookahead         = _{ indent ~ var_name ~ sp ~ ":=" ~ sp ~ "[" }
-list_idx_lookahead     = _{ var_name ~ sp ~ "[" }
-list_append_lookahead  = _{ indent ~ var_name ~ sp ~ "." ~ sp ~ "append" }
-for_lookahead          = _{ indent ~ "for" ~ ws+ ~ identifier_char+ ~ sp ~ ":=" }
-od_lookahead           = _{ indent ~ "od" ~ sp ~ ";" }
-global_lookahead       = _{ "GLOBAL" ~ sp }
-dyn_lookahead = _{ (!")" ~ ANY)* ~ "[" } // Lookahead to ensure parens contain a '[' before matching as dynamic
+// List unpacking
+list_unpack = {"..." ~ var_name}
 
 // Dynamic Constructor (Matches only if '[' is present inside parens)
 constructor_name = @{ identifier_char+ }
@@ -55,7 +48,7 @@ dyn_constructor  = {
     "(" ~ sp ~ arg_expr* ~ sp ~ ")" 
 }
 
-// Append and Argument structures
+// List append and Argument structures
 arg_chunk = @{ (!("(" | ")" | ";" | list_idx_lookahead) ~ ANY)+ }
 paren_expr = { "(" ~ sp ~ arg_expr* ~ sp ~ ")" }
 arg_expr = _{ list_indexing | paren_expr | arg_chunk }
@@ -75,9 +68,19 @@ for_loop = {
     "od" ~ sp ~ ";" 
 }
 
+// --- LOOKAHEADS ---
+import_lookahead       = _{ indent ~ "import" ~ sp ~ "\"" }
+list_lookahead         = _{ indent ~ var_name ~ sp ~ ":=" ~ sp ~ "[" }
+list_idx_lookahead     = _{ var_name ~ sp ~ "[" }
+list_append_lookahead  = _{ indent ~ var_name ~ sp ~ "." ~ sp ~ "append" }
+for_lookahead          = _{ indent ~ "for" ~ ws+ ~ identifier_char+ ~ sp ~ ":=" }
+od_lookahead           = _{ indent ~ "od" ~ sp ~ ";" }
+global_lookahead       = _{ "GLOBAL" ~ sp }
+dyn_lookahead = _{ (!")" ~ ANY)* ~ "[" } // Lookahead to ensure parens contain a '[' before matching as dynamic
+
 // Raw NuSMV Chunk Catch-All
-raw_char = _{ !(import_lookahead | list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor | global_lookahead) ~ ANY }
+raw_char = _{ !(list_unpack | import_lookahead | list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor | global_lookahead) ~ ANY }
 raw_nusmv_chunk = { raw_char+ }
 
 // SMVX Program
-program = { SOI ~ (global_block | for_loop | list | list_indexing | list_append | dyn_constructor | import_stmt | raw_nusmv_chunk)* ~ EOI }
+program = { SOI ~ (global_block | for_loop | list | list_indexing | list_unpack | list_append | dyn_constructor | import_stmt | raw_nusmv_chunk)* ~ EOI }

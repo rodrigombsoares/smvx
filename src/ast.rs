@@ -9,6 +9,7 @@ pub(crate) enum Chunk {
     Import(ImportStmt),
     ListDef(ListDef),
     ListIdx(ListIdx),
+    ListUnpack(String),
     ListAppend(ListAppend),
     DynConstructor(DynConstructor),
     Loop(Loop),

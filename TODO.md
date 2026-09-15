@@ -8,7 +8,7 @@
     - `reduce!(OPERATOR, loop_var := START..END, expression)` macro
     - `reduce!(|, i := 1..3, d[i].pos = S3)` -> `d1.pos = S3 | d2.pos = S3 | d3.pos = S3`
     - `G (!s1.overflow & !s2.overflow & !s3.overflow);`
-- [ ] List unpacking
+- [X] List unpacking
     - `MODULE packet(...servers)` and be able to use this list later
 
 ## Dynamic

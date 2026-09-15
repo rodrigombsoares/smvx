@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, vec};
 use std::fmt::Display;
 use std::error::Error;
 
@@ -99,6 +99,27 @@ impl Lowerer {
                     Err(LowerError::ListNotDefined { name: append.name })
                 }
             }
+            Chunk::ListUnpack(list) => {
+                let base_name = singular(&list);
+
+                self.list_lengths
+                    .get(&base_name)
+                    .ok_or(LowerError::ListNotDefined { name: list })
+                    .map(|&length| {
+                        // Pre-allocate the exact capacity needed (length * 2 - 1)
+                        let mut unpacked = Vec::with_capacity(length.saturating_mul(2).saturating_sub(1));
+
+                        for i in 0..length {
+                            // Prepend the comma for all elements AFTER the first
+                            if i > 0 {
+                                unpacked.push(LoweredChunk::Raw(", ".to_string()));
+                            }
+                            unpacked.push(LoweredChunk::VarRef(format!("{}{}", base_name, i)));
+                        }
+
+                        unpacked
+                    })
+            }            
             Chunk::ListIdx(idx) => {
                 let name = singular(&idx.name);
                 if let Some(&length) = self.list_lengths.get(&name) {

@@ -1,25 +1,24 @@
--- Using smvx list syntax in the example
 MODULE main
-VAR
-  server0 : server_node(TRUE);
-  server1 : server_node(FALSE);
-  server2 : server_node(FALSE);
-  server3 : server_node(FALSE);
-  server4 : server_node(server0.active);
-  master_server : server_node(server0.active);
+  VAR
+    server0 : server_node(TRUE);
+    server1 : server_node(FALSE);
+    server2 : server_node(FALSE);
+    server3 : server_node(FALSE);
+    server4 : server_node(server0.active);
+    master_server : server_node(server0.active);
+    monitor : monitor_node(server0, server1, server2, server3, server4)
 
-DEFINE
-  some_server := master_server.active != server0.active;
-  test_forward := 1 != 0;
-
-SPEC
-  -- This also implies your parser could eventually map standard array indexing
-  -- to the underlying generated variables.
-  AG (server0.active | server1.active | server2.active | server3.active)
+  DEFINE
+    some_server := master_server.active != server0.active;
+    test_forward := 1 != 0;
 
 MODULE server_node(is_master)
-VAR
-  active : boolean;
-ASSIGN
-  init(active) := is_master;
-  next(active) := active; -- simplified logic
+  VAR
+    active : boolean;
+  ASSIGN
+    init(active) := is_master;
+    next(active) := active;
+
+MODULE monitor_node(server0, server1, server2, server3, server4)
+  SPEC
+    AG (server0.active | server1.active | server2.active | server3.active | server4.active)

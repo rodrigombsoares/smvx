@@ -33,7 +33,7 @@ pub(crate) fn parse_program<P: AsRef<Path>>(file_path: P) -> Result<Program, Err
 
     // TODO: debug log here
     // debug ast
-    // println!("{:#?}", chunks);
+    println!("{:#?}", chunks);
 
     Ok(Program { chunks })
 }
@@ -44,6 +44,7 @@ fn parse_chunk(pair: pest::iterators::Pair<Rule>) -> Result<Chunk, Error<Rule>> 
         Rule::import_stmt => Ok(Chunk::Import(parse_import(pair)?)),
         Rule::list => Ok(Chunk::ListDef(parse_list(pair)?)),
         Rule::list_indexing => Ok(Chunk::ListIdx(parse_list_indexing(pair)?)),
+        Rule::list_unpack => Ok(Chunk::ListUnpack(pair.into_inner().next().unwrap().as_str().to_string())),
         Rule::list_append => Ok(Chunk::ListAppend(parse_list_append(pair)?)),
         Rule::dyn_constructor => Ok(Chunk::DynConstructor(parse_dyn_constructor(pair)?)),
         Rule::for_loop => Ok(Chunk::Loop(parse_for_loop(pair)?)),
