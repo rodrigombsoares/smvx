@@ -10,7 +10,7 @@ VAR
 DEFINE
   -- 2. The DEFINE block evaluates the state of the nodes.
   -- Your Pass 1 phase will register this list first, allowing
-  -- the loop above to safely resolve 'triggers_i'.
+  -- the loop above to safely resolve 'triggers[i]'.
   trigger0 := node1.active;
   trigger1 := node2.active;
   trigger2 := node0.active;

@@ -49,5 +49,14 @@
 - [X] Refactor ir.rs context
 - [X] Refactor ir.rs methods
 - [X] Rust proper error handling
+
+## Bugs
+- [X] `nodes := [node(0, triggers[0])];` not recognized by the grammar
+- [X] Variable outside list assignment is not considered (maybe use a {i} here)
+```
+  for i := 1..2 do
+    nodes.append(node(i, triggers[i]));
+  od;
+```
 - [ ] If module doesn't end with \n then generated code should add this breaking
 - [ ] Fix line break after global removal

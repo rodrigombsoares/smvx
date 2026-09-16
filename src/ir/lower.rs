@@ -14,6 +14,7 @@ pub(crate) struct Lowerer {
     list_next_indices: HashMap<String, usize>,
     loop_vars: HashMap<String, i32>,
     global_vars: HashMap<String, i64>,
+    in_define_block: bool,
 }
 
 impl Lowerer {
@@ -23,6 +24,7 @@ impl Lowerer {
             list_next_indices: HashMap::new(),
             loop_vars: HashMap::new(),
             global_vars: HashMap::new(),
+            in_define_block: false,
         }
     }
 
@@ -83,7 +85,10 @@ impl Lowerer {
 
     fn lower_chunk(&mut self, chunk: Chunk) -> Result<Vec<LoweredChunk>, LowerError> {
         match chunk {
-            Chunk::RawNusmv(raw) => Ok(vec![LoweredChunk::Raw(raw)]),
+            Chunk::RawNusmv(raw) => {
+                self.update_block_context(&raw);
+                Ok(vec![LoweredChunk::Raw(raw)])
+            }
             Chunk::Global(_) => {
                 Ok(vec![])
             }
@@ -91,10 +96,21 @@ impl Lowerer {
                 let name = singular(&def.name);
                 let indent = def.indent;
                 self.list_next_indices.insert(name.clone(), def.elements.len());
-                Ok(def.elements.into_iter().enumerate().map(|(i, element)| {
+                let mut declarations = Vec::with_capacity(def.elements.len());
+                for (i, element) in def.elements.into_iter().enumerate() {
                     let var_name = format!("{}{}", name, i);
-                    LoweredChunk::VarDecl { indent: indent.clone(), name: var_name, value: element }
-                }).collect::<Vec<_>>())
+                    let value = element.iter()
+                        .map(|expr| self.render_arg_expr(expr))
+                        .collect::<Result<String, _>>()?
+                        .trim()
+                        .to_string();
+                    if self.in_define_block {
+                        declarations.push(LoweredChunk::Raw(format!("{}{} := {};\n", indent, var_name, value)));
+                    } else {
+                        declarations.push(LoweredChunk::VarDecl { indent: indent.clone(), name: var_name, value });
+                    }
+                }
+                Ok(declarations)
             }
             Chunk::ListAppend(append) => {
                 let name = singular(&append.name);
@@ -205,6 +221,26 @@ impl Lowerer {
         Ok(reduced)
     }
 
+    fn update_block_context(&mut self, raw: &str) {
+        for line in raw.lines() {
+            match line.trim_start() {
+                "DEFINE" => self.in_define_block = true,
+                line if line.starts_with("MODULE")
+                    || line == "VAR"
+                    || line == "IVAR"
+                    || line == "FROZENVAR"
+                    || line == "ASSIGN"
+                    || line == "TRANS"
+                    || line == "INIT"
+                    || line == "INVAR"
+                    || line == "SPEC"
+                    || line == "LTLSPEC"
+                    || line == "CTLSPEC" => self.in_define_block = false,
+                _ => {}
+            }
+        }
+    }
+
     // render_dyn_constructor flattens a dynamic constructor call (e.g. server_node(servers[0].active))
     // into its final NuSMV text.
     fn render_dyn_constructor(
@@ -232,6 +268,7 @@ impl Lowerer {
                 self.validate_index(&name, index, length)?;
                 Ok(format!("{}{}", name, index))
             }
+            ArgExpr::ValueInterpolation(index) => Ok(self.evaluate_index(index)?.to_string()),
             ArgExpr::Paren(exprs) => {
                 let inner = exprs.iter().map(|e| self.render_arg_expr(e)).collect::<Result<String, _>>()?;
                 Ok(format!("({})", inner))

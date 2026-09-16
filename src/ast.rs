@@ -28,7 +28,7 @@ pub(crate) struct ImportStmt {
 pub(crate) struct ListDef {
     pub(crate) indent: String,
     pub(crate) name: String,
-    pub(crate) elements: Vec<String>,
+    pub(crate) elements: Vec<Vec<ArgExpr>>,
 }
 
 #[derive(Debug, Clone)]
@@ -84,6 +84,7 @@ pub(crate) struct DynConstructor {
 #[derive(Debug, Clone)]
 pub(crate) enum ArgExpr {
     ListIdx(ListIdx),          
+    ValueInterpolation(IndexExpr),
     Paren(Vec<ArgExpr>),       
     Chunk(String),             
 }

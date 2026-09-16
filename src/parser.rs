@@ -75,9 +75,27 @@ fn parse_list(pair: pest::iterators::Pair<Rule>) -> Result<ListDef, Error<Rule>>
     let name = inner.next().unwrap().as_str().to_string();
     
     let element_pairs = inner.next().unwrap().into_inner();
-    let elements = element_pairs.map(|e| e.as_str().to_string()).collect();
+    let elements = element_pairs
+        .map(parse_list_element)
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(ListDef { indent, name, elements })
+}
+
+fn parse_list_element(pair: pest::iterators::Pair<Rule>) -> Result<Vec<ArgExpr>, Error<Rule>> {
+    let mut expressions = Vec::new();
+
+    for part in pair.into_inner() {
+        if part.as_rule() == Rule::list_indexed_value {
+            for indexed_part in part.into_inner() {
+                expressions.push(parse_arg_expr(indexed_part)?);
+            }
+        } else {
+            expressions.push(parse_arg_expr(part)?);
+        }
+    }
+
+    Ok(expressions)
 }
 
 fn parse_import(pair: pest::iterators::Pair<Rule>) -> Result<ImportStmt, Error<Rule>> {
@@ -211,6 +229,10 @@ fn parse_arg_expr(pair: pest::iterators::Pair<Rule>) -> Result<ArgExpr, pest::er
             
             Ok(ArgExpr::ListIdx(ListIdx { name, idx }))
         }
+        Rule::value_interpol => {
+            let idx = parse_index_expr(pair.into_inner().next().unwrap());
+            Ok(ArgExpr::ValueInterpolation(idx))
+        }
         Rule::paren_expr => {
             // Recursively parse arguments inside parentheses
             let mut exprs = Vec::new();
@@ -219,7 +241,7 @@ fn parse_arg_expr(pair: pest::iterators::Pair<Rule>) -> Result<ArgExpr, pest::er
             }
             Ok(ArgExpr::Paren(exprs))
         }
-        Rule::arg_chunk => {
+        Rule::arg_chunk | Rule::list_chunk => {
             // Raw text like ".active"
             Ok(ArgExpr::Chunk(pair.as_str().to_string()))
         }
