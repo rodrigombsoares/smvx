@@ -11,6 +11,7 @@ pub(crate) enum Chunk {
     ListIdx(ListIdx),
     ListUnpack(String),
     ListAppend(ListAppend),
+    ReduceExp(ReduceExpr),
     DynConstructor(DynConstructor),
     Loop(Loop),
     RawNusmv(String),
@@ -61,6 +62,15 @@ pub(crate) struct ListAppend {
 pub(crate) enum AppendElement {
     DynConstructor(DynConstructor),
     Exprs(Vec<ArgExpr>), 
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ReduceExpr {
+    pub(crate) op: String,
+    pub(crate) loop_var: String,
+    pub(crate) range_start: RangeBound,
+    pub(crate) range_end: RangeBound,
+    pub(crate) args: Vec<ArgExpr>,
 }
 
 #[derive(Debug, Clone)]

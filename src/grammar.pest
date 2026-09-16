@@ -68,6 +68,16 @@ for_loop = {
     "od" ~ sp ~ ";" 
 }
 
+// Macros
+reduce_op = { "|" | "&" | "xor" | "+" | "*" }
+reduce_expr = { 
+    "reduce!" ~ "(" ~ sp ~ 
+    reduce_op ~ sp ~ "," ~ sp ~ 
+    loop_var ~ sp ~ ":=" ~ sp ~ range_start ~ sp ~ ".." ~ sp ~ range_end ~ sp ~ "," ~ sp ~ 
+    arg_expr* ~ sp ~ 
+    ")" 
+}
+
 // --- LOOKAHEADS ---
 import_lookahead       = _{ indent ~ "import" ~ sp ~ "\"" }
 list_lookahead         = _{ indent ~ var_name ~ sp ~ ":=" ~ sp ~ "[" }
@@ -77,10 +87,11 @@ for_lookahead          = _{ indent ~ "for" ~ ws+ ~ identifier_char+ ~ sp ~ ":=" 
 od_lookahead           = _{ indent ~ "od" ~ sp ~ ";" }
 global_lookahead       = _{ "GLOBAL" ~ sp }
 dyn_lookahead = _{ (!")" ~ ANY)* ~ "[" } // Lookahead to ensure parens contain a '[' before matching as dynamic
+reduce_lookahead = _{ "reduce!" ~ "(" }
 
 // Raw NuSMV Chunk Catch-All
-raw_char = _{ !(list_unpack | import_lookahead | list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor | global_lookahead) ~ ANY }
+raw_char = _{ !(list_unpack | import_lookahead | list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor | global_lookahead | reduce_lookahead) ~ ANY }
 raw_nusmv_chunk = { raw_char+ }
 
 // SMVX Program
-program = { SOI ~ (global_block | for_loop | list | list_indexing | list_unpack | list_append | dyn_constructor | import_stmt | raw_nusmv_chunk)* ~ EOI }
+program = { SOI ~ (global_block | for_loop | reduce_expr | list | list_indexing | list_unpack | list_append | dyn_constructor | import_stmt | raw_nusmv_chunk)* ~ EOI }

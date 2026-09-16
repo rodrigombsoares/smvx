@@ -19,4 +19,4 @@ MODULE server_node(is_master)
 
 MODULE monitor_node(...servers)
   SPEC
-    AG (servers[0].active | servers[1].active | servers[2].active | servers[3].active | servers[4].active)
+    AG (reduce!(|, i := 0..5, servers[i].active))

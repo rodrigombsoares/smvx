@@ -9,7 +9,7 @@ use crate::ast::{
     Program, Chunk, ListDef, ListIdx, ListAppend, 
     DynConstructor, ArgExpr, AppendElement, 
     IndexExpr, Loop, MathOperator, ImportStmt,
-    RangeBound, GlobalDecl,
+    RangeBound, GlobalDecl, ReduceExpr
 };
 
 
@@ -33,7 +33,7 @@ pub(crate) fn parse_program<P: AsRef<Path>>(file_path: P) -> Result<Program, Err
 
     // TODO: debug log here
     // debug ast
-    println!("{:#?}", chunks);
+    // println!("{:#?}", chunks);
 
     Ok(Program { chunks })
 }
@@ -45,6 +45,7 @@ fn parse_chunk(pair: pest::iterators::Pair<Rule>) -> Result<Chunk, Error<Rule>> 
         Rule::list => Ok(Chunk::ListDef(parse_list(pair)?)),
         Rule::list_indexing => Ok(Chunk::ListIdx(parse_list_indexing(pair)?)),
         Rule::list_unpack => Ok(Chunk::ListUnpack(pair.into_inner().next().unwrap().as_str().to_string())),
+        Rule::reduce_expr => Ok(Chunk::ReduceExp(parse_reduce_expr(pair)?)),
         Rule::list_append => Ok(Chunk::ListAppend(parse_list_append(pair)?)),
         Rule::dyn_constructor => Ok(Chunk::DynConstructor(parse_dyn_constructor(pair)?)),
         Rule::for_loop => Ok(Chunk::Loop(parse_for_loop(pair)?)),
@@ -110,7 +111,7 @@ fn parse_index_expr(pair: pest::iterators::Pair<Rule>) -> IndexExpr {
     }
 }
 
-pub(crate) fn parse_list_append(pair: pest::iterators::Pair<Rule>) -> Result<ListAppend, pest::error::Error<Rule>> {
+fn parse_list_append(pair: pest::iterators::Pair<Rule>) -> Result<ListAppend, pest::error::Error<Rule>> {
     let mut inner = pair.into_inner();
     
     // Get the indentation (e.g., "  ")
@@ -124,6 +125,29 @@ pub(crate) fn parse_list_append(pair: pest::iterators::Pair<Rule>) -> Result<Lis
     let element = parse_append_element(element_pair)?;
 
     Ok(ListAppend { indent, name, element })
+}
+
+fn parse_reduce_expr(pair: pest::iterators::Pair<Rule>) -> Result<ReduceExpr, pest::error::Error<Rule>> {
+    let mut inner = pair.into_inner();
+    
+    // Get the operator
+    let op_pair = inner.next().unwrap();
+    let op = op_pair.as_str().to_string();
+
+    // Get the loop variable
+    let loop_var = inner.next().unwrap().as_str().to_string();
+
+    // Get the range start and end
+    let range_start = parse_range_bound(inner.next().unwrap());
+    let range_end = parse_range_bound(inner.next().unwrap());
+
+    // Get the arguments
+    let mut args = Vec::new();
+    for p in inner {
+        args.push(parse_arg_expr(p)?);
+    }
+
+    Ok(ReduceExpr { op, loop_var, range_start, range_end, args })
 }
 
 fn parse_append_element(pair: pest::iterators::Pair<Rule>) -> Result<AppendElement, pest::error::Error<Rule>> {

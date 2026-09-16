@@ -5,7 +5,7 @@ use std::error::Error;
 use crate::ast::{
     Program, Chunk, ArgExpr, AppendElement, 
     DynConstructor, IndexExpr, Loop, MathOperator,
-    RangeBound
+    RangeBound, ReduceExpr
 };
 
 #[derive(Debug, Clone)]
@@ -131,6 +131,10 @@ impl Lowerer {
                     Err(LowerError::ListNotDefined { name: idx.name })
                 }
             }
+            Chunk::ReduceExp(reduce) => {
+                let rendered = self.render_reduce_expr(&reduce)?;
+                Ok(vec![LoweredChunk::Raw(rendered)])
+            }
             Chunk::DynConstructor(dc) => {
                 let rendered = self.render_dyn_constructor(&dc)?;
                 Ok(vec![LoweredChunk::Raw(rendered)])
@@ -154,6 +158,37 @@ impl Lowerer {
         }
     }
 
+    fn render_reduce_expr(&mut self, reduce: &ReduceExpr) -> Result<String, LowerError> {
+        let start = match &reduce.range_start {
+            RangeBound::Number(val) => *val,
+            RangeBound::Variable(val) => self.global_vars[val],
+        };
+        let end = match &reduce.range_end {
+            RangeBound::Number(val) => *val,
+            RangeBound::Variable(val) => self.global_vars[val],
+        };
+        let mut reduced = String::new();
+        for i in start..end {
+            let previous = self.loop_vars.insert(reduce.loop_var.clone(), i as i32);
+            // Prepend the operator for all elements AFTER the first
+            if i > 0 {
+                reduced.push_str(&format!(" {} ", reduce.op));
+            }
+            let args = reduce.args.iter().map(|a| self.render_arg_expr(a)).collect::<Result<String, LowerError>>()?;
+            reduced.push_str(&args);
+            match previous {
+                Some(value) => {
+                    self.loop_vars.insert(reduce.loop_var.clone(), value);
+                }
+                None => {
+                    self.loop_vars.remove(&reduce.loop_var);
+                }
+            }
+        }
+
+        Ok(reduced)
+    }
+
     // render_dyn_constructor flattens a dynamic constructor call (e.g. server_node(servers[0].active))
     // into its final NuSMV text.
     fn render_dyn_constructor(
@@ -170,6 +205,7 @@ impl Lowerer {
         &mut self,
         expr: &ArgExpr,
     ) -> Result<String, LowerError> {
+        // TODO: dedup this code
         match expr {
             ArgExpr::ListIdx(idx) => {
                 let name: String = singular(&idx.name);

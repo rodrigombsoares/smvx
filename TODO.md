@@ -4,7 +4,7 @@
 - [X] Implement indexing
 - [X] Implement appending
 - [X] Correct identation and line breaks
-- [ ] Logical reduction
+- [X] Logical reduction
     - `reduce!(OPERATOR, loop_var := START..END, expression)` macro
     - `reduce!(|, i := 1..3, d[i].pos = S3)` -> `d1.pos = S3 | d2.pos = S3 | d3.pos = S3`
     - `G (!s1.overflow & !s2.overflow & !s3.overflow);`
