@@ -11,6 +11,7 @@ use super::{LowerError, LoweredChunk, LoweredProgram};
 // stores the current state of list lengths and loop variables during the lowering process.
 pub(crate) struct Lowerer {
     list_lengths: HashMap<String, usize>,
+    list_next_indices: HashMap<String, usize>,
     loop_vars: HashMap<String, i32>,
     global_vars: HashMap<String, i64>,
 }
@@ -19,15 +20,61 @@ impl Lowerer {
     pub(crate) fn new() -> Self {
         Lowerer {
             list_lengths: HashMap::new(),
+            list_next_indices: HashMap::new(),
             loop_vars: HashMap::new(),
             global_vars: HashMap::new(),
         }
     }
 
     pub(crate) fn lower(mut self, ast: Program) -> Result<LoweredProgram, LowerError> {
+        self.collect_variables(&ast.chunks)?;
+        self.lower_chunks(ast.chunks)
+    }
+
+    fn collect_variables(&mut self, chunks: &Vec<Chunk>) -> Result<(), LowerError> {
+        for chunk in chunks {
+            match chunk {
+                Chunk::ListDef(def) => {
+                    let name: String = singular(&def.name);
+                    self.list_lengths.insert(name, def.elements.len());
+                }
+                Chunk::ListAppend(ap) => {
+                    let name: String = singular(&ap.name);
+                    if let Some(&length) = self.list_lengths.get(&name) {
+                        self.list_lengths.insert(name, length + 1);
+                    } else {
+                        return Err(LowerError::ListNotDefined { name: ap.name.clone() });
+                    }
+                }
+                Chunk::Global(def) => {
+                    for g in def {
+                        self.global_vars.insert(g.name.clone(), g.value);
+                    }
+                }
+                Chunk::Loop(loop_) => {
+                    let start = match &loop_.start {
+                        RangeBound::Number(value) => *value,
+                        RangeBound::Variable(name) => self.global_vars[name],
+                    };
+                    let end = match &loop_.end {
+                        RangeBound::Number(value) => *value,
+                        RangeBound::Variable(name) => self.global_vars[name],
+                    };
+
+                    for _ in start..=end {
+                        self.collect_variables(&loop_.body)?;
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    fn lower_chunks(&mut self, chunks: Vec<Chunk>) -> Result<LoweredProgram, LowerError> {
         let mut lowered_chunks = Vec::new();
 
-        for chunk in ast.chunks {
+        for chunk in chunks {
             lowered_chunks.extend(self.lower_chunk(chunk)?);
         }
 
@@ -37,16 +84,13 @@ impl Lowerer {
     fn lower_chunk(&mut self, chunk: Chunk) -> Result<Vec<LoweredChunk>, LowerError> {
         match chunk {
             Chunk::RawNusmv(raw) => Ok(vec![LoweredChunk::Raw(raw)]),
-            Chunk::Global(def) => {
-                for g in def {
-                    self.global_vars.insert(g.name, g.value);
-                }
+            Chunk::Global(_) => {
                 Ok(vec![])
             }
             Chunk::ListDef(def) => {
                 let name = singular(&def.name);
-                self.list_lengths.insert(name.clone(), def.elements.len());
                 let indent = def.indent;
+                self.list_next_indices.insert(name.clone(), def.elements.len());
                 Ok(def.elements.into_iter().enumerate().map(|(i, element)| {
                     let var_name = format!("{}{}", name, i);
                     LoweredChunk::VarDecl { indent: indent.clone(), name: var_name, value: element }
@@ -54,10 +98,10 @@ impl Lowerer {
             }
             Chunk::ListAppend(append) => {
                 let name = singular(&append.name);
-                if let Some(&length) = self.list_lengths.get(&name) {
-                    let var_name = format!("{}{}", name, length);
+                if let Some(&next_index) = self.list_next_indices.get(&name) {
+                    let var_name = format!("{}{}", name, next_index);
                     let value = self.render_append_element(&append.element)?;
-                    self.list_lengths.insert(name.clone(), length + 1);
+                    self.list_next_indices.insert(name, next_index + 1);
                     Ok(vec![LoweredChunk::VarDecl { indent: append.indent, name: var_name, value }])
                 } else {
                     Err(LowerError::ListNotDefined { name: append.name })

@@ -1,0 +1,35 @@
+MODULE main
+VAR
+  -- 1. The VAR block dynamically builds the nodes.
+  -- In a single-pass compiler, this would crash because 'triggers'
+  -- hasn't been defined yet, so its length is unknown!
+  nodes := [node(0, triggers[0])];
+  for i := 1..2 do
+    nodes.append(node(i, triggers[i]));
+  od;
+
+DEFINE
+  -- 2. The DEFINE block evaluates the state of the nodes.
+  -- Your Pass 1 phase will register this list first, allowing
+  -- the loop above to safely resolve 'triggers[i]'.
+  triggers := [
+    nodes[1].active,
+    nodes[2].active,
+    nodes[0].active
+  ];
+
+LTLSPEC
+  -- 3. We can even test our new reduce! macro here
+  -- "Eventually, all nodes in the ring will be active"
+  F (reduce!(&, i := 0..2, nodes[i].active));
+
+MODULE node(id, trigger)
+VAR
+  active : boolean;
+ASSIGN
+  -- Node 0 starts active to kick off the chain reaction
+  init(active) := id = 0; 
+  next(active) := case
+    trigger : TRUE;
+    TRUE : active;
+  esac;
