@@ -1,47 +1,11 @@
 use std::{collections::HashMap, vec};
-use std::fmt::Display;
-use std::error::Error;
 
 use crate::ast::{
     Program, Chunk, ArgExpr, AppendElement, 
     DynConstructor, IndexExpr, Loop, MathOperator,
     RangeBound, ReduceExpr, ListIdx, ExpandExpr
 };
-
-#[derive(Debug, Clone)]
-pub(crate) struct LoweredProgram {
-    pub(crate) chunks: Vec<LoweredChunk>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) enum LoweredChunk {
-    Raw(String),
-    VarDecl { indent: String, name: String, value: String }, // Flattened declarations
-    VarRef(String),                                          // Flattened references
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum LowerError {
-    ListNotDefined { name: String },
-    IndexOutOfBounds { list: String, index: i32, length: usize },
-    UnknownLoopVariable { name: String },
-}
-
-impl Display for LowerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::ListNotDefined { name } => write!(f, "list {} is not defined", name),
-            Self::IndexOutOfBounds { list, index, length } => {
-                write!(f, "index {} is out of bounds for list {} of length {}", index, list, length)
-            }
-            Self::UnknownLoopVariable { name } => {
-                write!(f, "unknown loop variable in list index: {}", name)
-            }
-        }
-    }
-}
-
-impl Error for LowerError {}
+use super::{LowerError, LoweredChunk, LoweredProgram};
 
 // Lower does the lowering process, transforming the AST into a flattened IR representation.
 // stores the current state of list lengths and loop variables during the lowering process.
