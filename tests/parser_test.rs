@@ -38,3 +38,16 @@ fn test_parse_smvx_import() {
     assert!(!smv.is_empty());
     assert_eq!(smv, std::fs::read_to_string(expected_path).unwrap());
 }
+
+#[test]
+fn test_parse_smvx_expand() {
+    let file_path = "tests/fixtures/expand/expand.smvx";
+    let expected_path = "tests/fixtures/expand/expand.smv";
+    
+    let mut transpiler = SMVXTranspiler::new();
+    let smv = transpiler.transpile(file_path.into()).unwrap();
+
+    print!("{}", smv);
+    assert!(!smv.is_empty());
+    assert_eq!(smv, std::fs::read_to_string(expected_path).unwrap());
+}

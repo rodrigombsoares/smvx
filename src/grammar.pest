@@ -61,14 +61,16 @@ loop_var = @{ identifier_char+ }
 range_start = { number | var_name}
 range_end = { number | var_name}
 
-for_body = _{ for_loop | list | list_indexing | list_append | dyn_constructor | raw_nusmv_chunk }
+for_body = _{ for_loop | reduce_expr | expand_expr | list | list_indexing | list_unpack | list_append | dyn_constructor | import_stmt | id_interpol | raw_nusmv_chunk }
+// No sp_nl separator between "do" and the body, or between body items: raw_nusmv_chunk
+// must capture inter-item whitespace/newlines itself, otherwise indentation and spacing is lost.
 for_loop = { 
-    indent ~ "for" ~ ws+ ~ loop_var ~ sp ~ ":=" ~ sp ~ range_start ~ sp ~ ".." ~ sp ~ range_end ~ sp ~ "do" ~ sp_nl ~ 
-    (for_body ~ sp_nl)* ~ 
-    "od" ~ sp ~ ";" 
+    indent ~ "for" ~ ws+ ~ loop_var ~ sp ~ ":=" ~ sp ~ range_start ~ sp ~ ".." ~ sp ~ range_end ~ sp ~ "do" ~ 
+    for_body* ~ 
+    sp ~ "od" ~ sp ~ ";" 
 }
 
-// Macros
+// List reduce - Macro
 reduce_op = { "|" | "&" | "xor" | "+" | "*" }
 reduce_expr = { 
     "reduce!" ~ "(" ~ sp ~ 
@@ -76,6 +78,17 @@ reduce_expr = {
     loop_var ~ sp ~ ":=" ~ sp ~ range_start ~ sp ~ ".." ~ sp ~ range_end ~ sp ~ "," ~ sp ~ 
     arg_expr* ~ sp ~ 
     ")" 
+}
+
+// Identifier interpolation
+id_interpol = { var_name ~ "{" ~ sp ~ (index_math | index_operand) ~ sp ~ "}"} 
+
+// Expand - Macro
+expand_expr = {
+    "expand!" ~ sp ~ "(" ~ sp ~
+    (id_interpol | arg_expr) ~ sp ~ "," ~ sp ~
+    loop_var ~ sp ~ ":=" ~ sp ~ range_start ~ sp ~ ".." ~ sp ~ range_end ~ sp ~ 
+    ")"
 }
 
 // --- LOOKAHEADS ---
@@ -86,12 +99,14 @@ list_append_lookahead  = _{ indent ~ var_name ~ sp ~ "." ~ sp ~ "append" }
 for_lookahead          = _{ indent ~ "for" ~ ws+ ~ identifier_char+ ~ sp ~ ":=" }
 od_lookahead           = _{ indent ~ "od" ~ sp ~ ";" }
 global_lookahead       = _{ "GLOBAL" ~ sp }
-dyn_lookahead = _{ (!")" ~ ANY)* ~ "[" } // Lookahead to ensure parens contain a '[' before matching as dynamic
-reduce_lookahead = _{ "reduce!" ~ "(" }
+dyn_lookahead          = _{ (!")" ~ ANY)* ~ "[" } // Lookahead to ensure parens contain a '[' before matching as dynamic
+reduce_lookahead       = _{ "reduce!" ~ "(" }
+expand_lookahead       = _{ "expand!" ~ sp ~ "(" }
 
 // Raw NuSMV Chunk Catch-All
-raw_char = _{ !(list_unpack | import_lookahead | list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor | global_lookahead | reduce_lookahead) ~ ANY }
+raw_char = _{ !(list_unpack | import_lookahead | list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor | global_lookahead | reduce_lookahead | expand_lookahead | id_interpol) ~ ANY }
 raw_nusmv_chunk = { raw_char+ }
 
 // SMVX Program
-program = { SOI ~ (global_block | for_loop | reduce_expr | list | list_indexing | list_unpack | list_append | dyn_constructor | import_stmt | raw_nusmv_chunk)* ~ EOI }
+// TODO: unify this with for_body (deduplicate)
+program = { SOI ~ (global_block | for_loop | reduce_expr | expand_expr | list | list_indexing | list_unpack | list_append | dyn_constructor | import_stmt | id_interpol | raw_nusmv_chunk)* ~ EOI }

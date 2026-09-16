@@ -1,0 +1,18 @@
+-- Jumping frog game
+MODULE main
+VAR
+  pos : {L1, L2, L3, L4, L5};
+
+ASSIGN
+  init(pos) := L1;
+  next(pos) := case
+    pos = L1 : L2;
+    pos = L2 : L3;
+    pos = L3 : L4;
+    pos = L4 : L5;
+    pos = L5 : L5;
+    TRUE : pos;
+  esac;
+
+LTLSPEC
+  F (pos = L5);

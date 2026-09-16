@@ -9,7 +9,8 @@ use crate::ast::{
     Program, Chunk, ListDef, ListIdx, ListAppend, 
     DynConstructor, ArgExpr, AppendElement, 
     IndexExpr, Loop, MathOperator, ImportStmt,
-    RangeBound, GlobalDecl, ReduceExpr
+    RangeBound, GlobalDecl, ReduceExpr,
+    ExpandExpr,
 };
 
 
@@ -45,8 +46,10 @@ fn parse_chunk(pair: pest::iterators::Pair<Rule>) -> Result<Chunk, Error<Rule>> 
         Rule::list => Ok(Chunk::ListDef(parse_list(pair)?)),
         Rule::list_indexing => Ok(Chunk::ListIdx(parse_list_indexing(pair)?)),
         Rule::list_unpack => Ok(Chunk::ListUnpack(pair.into_inner().next().unwrap().as_str().to_string())),
-        Rule::reduce_expr => Ok(Chunk::ReduceExp(parse_reduce_expr(pair)?)),
         Rule::list_append => Ok(Chunk::ListAppend(parse_list_append(pair)?)),
+        Rule::reduce_expr => Ok(Chunk::ReduceExp(parse_reduce_expr(pair)?)),
+        Rule::id_interpol => Ok(Chunk::IdInterpolation(parse_list_indexing(pair)?)),
+        Rule::expand_expr => Ok(Chunk::ExpandExp(parse_expand_expr(pair)?)),
         Rule::dyn_constructor => Ok(Chunk::DynConstructor(parse_dyn_constructor(pair)?)),
         Rule::for_loop => Ok(Chunk::Loop(parse_for_loop(pair)?)),
         Rule::raw_nusmv_chunk => Ok(Chunk::RawNusmv(pair.as_str().to_string())),
@@ -148,6 +151,22 @@ fn parse_reduce_expr(pair: pest::iterators::Pair<Rule>) -> Result<ReduceExpr, pe
     }
 
     Ok(ReduceExpr { op, loop_var, range_start, range_end, args })
+}
+
+fn parse_expand_expr(pair: pest::iterators::Pair<Rule>) -> Result<ExpandExpr, pest::error::Error<Rule>> {
+    let mut inner = pair.into_inner();
+    
+    // Get the id_interpol (ListIdx)
+    let id_interpol = parse_list_indexing(inner.next().unwrap())?;
+    
+    // Get the loop variable
+    let loop_var = inner.next().unwrap().as_str().to_string();
+
+    // Get the range start and end
+    let range_start = parse_range_bound(inner.next().unwrap());
+    let range_end = parse_range_bound(inner.next().unwrap());
+
+    Ok(ExpandExpr { id_interpol, loop_var, range_start, range_end })
 }
 
 fn parse_append_element(pair: pest::iterators::Pair<Rule>) -> Result<AppendElement, pest::error::Error<Rule>> {

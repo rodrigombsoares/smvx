@@ -12,6 +12,8 @@ pub(crate) enum Chunk {
     ListUnpack(String),
     ListAppend(ListAppend),
     ReduceExp(ReduceExpr),
+    IdInterpolation(ListIdx),
+    ExpandExp(ExpandExpr),
     DynConstructor(DynConstructor),
     Loop(Loop),
     RawNusmv(String),
@@ -99,6 +101,14 @@ pub(crate) struct Loop {
 pub(crate) enum RangeBound {
     Number(i64),
     Variable(String),
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ExpandExpr {
+    pub(crate) id_interpol: ListIdx,
+    pub(crate) loop_var: String,
+    pub(crate) range_start: RangeBound,
+    pub(crate) range_end: RangeBound,
 }
 
 #[derive(Debug, Clone)]

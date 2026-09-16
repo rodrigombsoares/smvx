@@ -5,7 +5,7 @@ use std::error::Error;
 use crate::ast::{
     Program, Chunk, ArgExpr, AppendElement, 
     DynConstructor, IndexExpr, Loop, MathOperator,
-    RangeBound, ReduceExpr
+    RangeBound, ReduceExpr, ListIdx, ExpandExpr
 };
 
 #[derive(Debug, Clone)]
@@ -144,6 +144,14 @@ impl Lowerer {
                 // Imports are handled in the transpiler, so we can ignore them here.
                 Ok(vec![])
             }
+            Chunk::IdInterpolation(id_interpol) => {
+                let rendered = self.render_id_interpol(&id_interpol)?;
+                Ok(vec![LoweredChunk::Raw(rendered)])
+            }
+            Chunk::ExpandExp(expand) => {
+                let rendered = self.render_expand_expr(&expand)?;
+                Ok(vec![LoweredChunk::Raw(rendered)])
+            }
         }
     }
 
@@ -264,14 +272,29 @@ impl Lowerer {
             RangeBound::Number(val) => *val,
             RangeBound::Variable(val) => self.global_vars[val],
         };
+        let body_len = l.body.len();
 
         for i in start..=end {
+            let is_last_iter = i == end;
             let previous = self.loop_vars.insert(l.var_name.clone(), i as i32);
-            let result = l.body.iter().cloned().try_for_each(|mut chunk| {
+            let result = l.body.iter().cloned().enumerate().try_for_each(|(idx, mut chunk)| {
+                // TODO: make this generic
                 if let Chunk::ListAppend(ref mut append) = chunk {
                     append.indent = l.indent.clone();
                 } else if let Chunk::ListDef(ref mut def) = chunk {
                     def.indent = l.indent.clone();
+                } else if let Chunk::RawNusmv(ref mut raw) = chunk {
+                    // The leading whitespace/newline captured before the body's first raw text
+                    // is the loop's own indentation, not the emitted line's; restore it explicitly.
+                    if idx == 0 {
+                        let trimmed = raw.trim_start_matches(['\n', ' ', '\t']);
+                        *raw = if trimmed.is_empty() { String::new() } else { format!("{}{}", l.indent, trimmed) };
+                    }
+                    // Only the final iteration's trailing newline should survive, otherwise the
+                    // following top-level content's own leading newline creates a blank line.
+                    if idx == body_len - 1 && is_last_iter {
+                        *raw = raw.trim_end_matches('\n').to_string();
+                    }
                 }
                 self.lower_chunk(chunk).map(|chunks| lowered_chunks.extend(chunks))
             });
@@ -288,6 +311,43 @@ impl Lowerer {
         Ok(lowered_chunks)
     }
 
+    // render_id_interpol flattens identifier interpolation (e.g. D{i}) into its final NuSMV text,
+    // concatenating the base name with the evaluated index without any list-bounds validation.
+    fn render_id_interpol(&self, id_interpol: &ListIdx) -> Result<String, LowerError> {
+        let index = self.evaluate_index(&id_interpol.idx)?;
+        Ok(format!("{}{}", id_interpol.name, index))
+    }
+
+    fn render_expand_expr(&mut self, expand: &ExpandExpr) -> Result<String, LowerError> {
+        let start = match &expand.range_start {
+            RangeBound::Number(val) => *val,
+            RangeBound::Variable(val) => self.global_vars[val],
+        };
+        let end = match &expand.range_end {
+            RangeBound::Number(val) => *val,
+            RangeBound::Variable(val) => self.global_vars[val],
+        };
+
+        let mut expanded = String::new();
+        for i in start..=end {
+            let previous = self.loop_vars.insert(expand.loop_var.clone(), i as i32);
+            if i > start {
+                expanded.push_str(", ");
+            }
+            let rendered = self.render_id_interpol(&expand.id_interpol);
+            match previous {
+                Some(value) => {
+                    self.loop_vars.insert(expand.loop_var.clone(), value);
+                }
+                None => {
+                    self.loop_vars.remove(&expand.loop_var);
+                }
+            }
+            expanded.push_str(&rendered?);
+        }
+
+        Ok(expanded)
+    }
 }
 
 // singular helper function strips the trailing 's' used to derive a list's flattened variable prefix.

@@ -13,9 +13,9 @@
 
 ## Dynamic
 - [X] Implement dynamic constructors (ie: `server_node(servers[0])`)
-- [ ] Expand macro `pos : {GS, ES, expand!(S{i}, i := 1..3)};`
+- [X] Expand macro `pos : {GS, ES, expand!(S{i}, i := 1..3)};`
     - Dynamic enums (eg: `pos : {GS, S1, S2, S3, D1, D2, D3};`)
-- [ ] Access a value from an enum dynamically (identifier interpolation)
+- [X] Access a value from an enum dynamically (identifier interpolation)
     - `d[i].pos = GS : D{i};`
 
 ## For loops
