@@ -18,7 +18,7 @@ import_stmt = { indent ~ "import" ~ sp ~ "\"" ~ path ~ "\"" ~ sp ~ ";" }
 
 // Globals
 global_val  = { number }
-global_decl = { sp_nl ~ var_name ~ sp ~ ":" ~ sp ~ global_val ~ sp ~ ";" }
+global_decl = { sp_nl ~ var_name ~ sp ~ ":" ~ sp ~ global_val ~ sp ~ ";" ~ sp_nl }
 global_block = { "GLOBAL" ~ sp_nl ~ global_decl* }
 
 // List definition

@@ -60,7 +60,7 @@
   od;
 ```
 - [ ] If module doesn't end with \n then generated code should add this breaking
-- [ ] Fix line break after global removal
+- [X] Fix line break after global removal
 - [X] Loop with reduce is not working (maybe nested loops are not working)
 - [X] indentation errors on loops inside case
 ```
