@@ -245,6 +245,7 @@ fn parse_arg_expr(pair: pest::iterators::Pair<Rule>) -> Result<ArgExpr, pest::er
             // Raw text like ".active"
             Ok(ArgExpr::Chunk(pair.as_str().to_string()))
         }
+        Rule::reduce_expr => Ok(ArgExpr::Reduce(Box::new(parse_reduce_expr(pair)?))),
         _ => unreachable!("Unexpected rule in arg_expr: {:?}", pair.as_rule()),
     }
 }

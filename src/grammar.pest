@@ -54,7 +54,7 @@ dyn_constructor  = {
 arg_chunk = @{ (!("(" | ")" | ";" | list_idx_lookahead) ~ ANY)+ }
 paren_expr = { "(" ~ sp ~ arg_expr* ~ sp ~ ")" }
 value_interpol = { "{{" ~ sp ~ list_idx ~ sp ~ "}}" }
-arg_expr = _{ list_indexing | value_interpol | paren_expr | arg_chunk }
+arg_expr = _{ list_indexing | value_interpol | paren_expr | reduce_expr | arg_chunk }
 
 append_element = { dyn_constructor | arg_expr+ }
 list_append = { indent ~ var_name ~ sp ~ "." ~ sp ~ "append" ~ sp ~ "(" ~ sp ~ append_element ~ sp ~ ")" ~ sp ~ ";" ~ (ws* ~ newline)* }
@@ -76,7 +76,7 @@ for_loop = {
 // List reduce - Macro
 reduce_op = { "|" | "&" | "xor" | "+" | "*" }
 reduce_expr = { 
-    "reduce!" ~ "(" ~ sp ~ 
+    sp_nl ~ "reduce!" ~ "(" ~ sp ~ 
     reduce_op ~ sp ~ "," ~ sp ~ 
     loop_var ~ sp ~ ":=" ~ sp ~ range_start ~ sp ~ ".." ~ sp ~ range_end ~ sp ~ "," ~ sp ~ 
     arg_expr* ~ sp ~ 

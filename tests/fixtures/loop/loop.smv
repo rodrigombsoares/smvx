@@ -1,21 +1,48 @@
--- TODO: Comments with list indexing inside ir are broken
 -- TODO: Fix line breaks on global removal
 
 
 MODULE main
 VAR
-  bit0 : counter_cell(TRUE);
-  bit1 : counter_cell(bit0);
-  bit2 : counter_cell(bit1);
+  -- 1. Standard single loop for instantiation
+  radio0 : radio(0);
+  radio1 : radio(1);
+  radio2 : radio(2);
 
-SPEC
-  AG AF bit2.carry_out
 
-MODULE counter_cell(carry_in)
-VAR
-  value : boolean;
-ASSIGN
-  init(value) := FALSE;
-  next(value) := value xor carry_in;
 DEFINE
-  carry_out := value & carry_in;
+  -- 2. NESTED LOOPS inside a raw chunk
+  -- Dynamically builds a combinatorial switch statement checking all pairs
+  any_collision := case
+    radio0.id != radio0.id & radio0.channel = radio0.channel : TRUE;
+    radio0.id != radio1.id & radio0.channel = radio1.channel : TRUE;
+    radio0.id != radio2.id & radio0.channel = radio2.channel : TRUE;
+    radio1.id != radio0.id & radio1.channel = radio0.channel : TRUE;
+    radio1.id != radio1.id & radio1.channel = radio1.channel : TRUE;
+    radio1.id != radio2.id & radio1.channel = radio2.channel : TRUE;
+    radio2.id != radio0.id & radio2.channel = radio0.channel : TRUE;
+    radio2.id != radio1.id & radio2.channel = radio1.channel : TRUE;
+    radio2.id != radio2.id & radio2.channel = radio2.channel : TRUE;
+    TRUE : FALSE;
+  esac;
+
+LTLSPEC
+  -- 3. NESTED REDUCE! MACROS
+  -- "Globally, it is never the case that ANY radio i collides with ANY radio j"
+  G !(radio0.id != radio0.id & radio0.channel = radio0.channel | radio0.id != radio1.id & radio0.channel = radio1.channel | radio0.id != radio2.id & radio0.channel = radio2.channel | radio1.id != radio0.id & radio1.channel = radio0.channel | radio1.id != radio1.id & radio1.channel = radio1.channel | radio1.id != radio2.id & radio1.channel = radio2.channel | radio2.id != radio0.id & radio2.channel = radio0.channel | radio2.id != radio1.id & radio2.channel = radio1.channel | radio2.id != radio2.id & radio2.channel = radio2.channel);
+
+MODULE radio(my_id)
+VAR
+  id : 0..2;
+  -- channel : 0..{{MAX_CH}}; TODO: global replacement
+  channel : 0..2;
+ASSIGN
+  -- IDs remain static
+  init(id) := my_id;
+  next(id) := id;
+
+  -- Radios hop channels round-robin
+  init(channel) := my_id;
+  next(channel) := case
+    channel = 2 : 0;
+    TRUE : channel + 1;
+  esac;

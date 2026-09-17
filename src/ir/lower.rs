@@ -273,7 +273,9 @@ impl Lowerer {
                 let inner = exprs.iter().map(|e| self.render_arg_expr(e)).collect::<Result<String, _>>()?;
                 Ok(format!("({})", inner))
             }
-            ArgExpr::Chunk(raw) => Ok(raw.clone()),
+            // Whitespace-only chunks are formatting artifacts from multi-line reduce!/loop bodies; drop them.
+            ArgExpr::Chunk(raw) => Ok(if raw.trim().is_empty() { String::new() } else { raw.clone() }),
+            ArgExpr::Reduce(reduce) => self.render_reduce_expr(reduce),
         }
     }
 
@@ -318,6 +320,13 @@ impl Lowerer {
             RangeBound::Variable(val) => self.global_vars[val],
         };
         let body_len = l.body.len();
+        // If the body's first real content is a self-indenting chunk (it renders its own
+        // indent), the leading whitespace-only raw chunk before it must be dropped entirely
+        // instead of replaced with `l.indent`, otherwise the line gets indented twice.
+        let first_is_self_indenting = matches!(
+            l.body.get(1),
+            Some(Chunk::ListAppend(_)) | Some(Chunk::ListDef(_)) | Some(Chunk::Loop(_))
+        );
 
         for i in start..end {
             let is_last_iter = i == end - 1;
@@ -328,12 +337,20 @@ impl Lowerer {
                     append.indent = l.indent.clone();
                 } else if let Chunk::ListDef(ref mut def) = chunk {
                     def.indent = l.indent.clone();
+                } else if let Chunk::Loop(ref mut inner) = chunk {
+                    // Nested loops must render at the outermost loop's indent, since all the
+                    // surrounding `for`/`od` scaffolding disappears from the emitted output.
+                    inner.indent = l.indent.clone();
                 } else if let Chunk::RawNusmv(ref mut raw) = chunk {
                     // The leading whitespace/newline captured before the body's first raw text
                     // is the loop's own indentation, not the emitted line's; restore it explicitly.
                     if idx == 0 {
                         let trimmed = raw.trim_start_matches(['\n', ' ', '\t']);
-                        *raw = if trimmed.is_empty() { String::new() } else { format!("{}{}", l.indent, trimmed) };
+                        *raw = if trimmed.is_empty() && first_is_self_indenting {
+                            String::new()
+                        } else {
+                            format!("{}{}", l.indent, trimmed)
+                        };
                     }
                     // Only the final iteration's trailing newline should survive, otherwise the
                     // following top-level content's own leading newline creates a blank line.

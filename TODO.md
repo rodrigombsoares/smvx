@@ -36,9 +36,10 @@
     for i := 1..servers_amt do
     ```
     - for loops should support globals as start/end index
+- [ ] Identifier interpolation for globals (currently only inside arg_expr)
 
 ## IR
-- [ ] Two passes in the lowerer
+- [X] Two passes in the lowerer
     - First pass picks up `Symbol Registration`, second pass `Expansion & Lowering`
     - This way a list defined under the `DEFINE` block can have elements picked up by `VAR` above
 
@@ -60,3 +61,13 @@
 ```
 - [ ] If module doesn't end with \n then generated code should add this breaking
 - [ ] Fix line break after global removal
+- [X] Loop with reduce is not working (maybe nested loops are not working)
+- [X] indentation errors on loops inside case
+```
+        token := case
+            for i := 0..3 do
+                request_charge_ds[i] : D{i};
+            od;
+            TRUE : NONE;
+        esac;
+```

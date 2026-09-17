@@ -1,23 +1,46 @@
--- TODO: Comments with list indexing inside ir are broken
 -- TODO: Fix line breaks on global removal
 GLOBAL 
-  BITS : 3;
-  UNUSED : 0;
+  MAX_IDX : 3; -- Represents 3 radios (0, 1, 2)
+  MAX_CH  : 2;
 
 MODULE main
 VAR
-  bits := [counter_cell(TRUE)];
-  for i := 1..BITS do
-    bits.append(counter_cell(bits[i-1]));
+  -- 1. Standard single loop for instantiation
+  radios := [radio(0)];
+  for i := 1..MAX_IDX do
+    radios.append(radio({{i}}));
   od;
-SPEC
-  AG AF bits[2].carry_out
 
-MODULE counter_cell(carry_in)
-VAR
-  value : boolean;
-ASSIGN
-  init(value) := FALSE;
-  next(value) := value xor carry_in;
 DEFINE
-  carry_out := value & carry_in;
+  -- 2. NESTED LOOPS inside a raw chunk
+  -- Dynamically builds a combinatorial switch statement checking all pairs
+  any_collision := case
+    for i := 0..MAX_IDX do
+      for j := 0..MAX_IDX do
+        radios[i].id != radios[j].id & radios[i].channel = radios[j].channel : TRUE;
+      od;
+    od;
+    TRUE : FALSE;
+  esac;
+
+LTLSPEC
+  -- 3. NESTED REDUCE! MACROS
+  -- "Globally, it is never the case that ANY radio i collides with ANY radio j"
+  G !(reduce!(|, i := 0..MAX_IDX, reduce!(|, j := 0..MAX_IDX, radios[i].id != radios[j].id & radios[i].channel = radios[j].channel)));
+
+MODULE radio(my_id)
+VAR
+  id : 0..2;
+  -- channel : 0..{{MAX_CH}}; TODO: global replacement
+  channel : 0..2;
+ASSIGN
+  -- IDs remain static
+  init(id) := my_id;
+  next(id) := id;
+
+  -- Radios hop channels round-robin
+  init(channel) := my_id;
+  next(channel) := case
+    channel = 2 : 0;
+    TRUE : channel + 1;
+  esac;

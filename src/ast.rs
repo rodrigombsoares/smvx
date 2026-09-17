@@ -87,6 +87,7 @@ pub(crate) enum ArgExpr {
     ValueInterpolation(IndexExpr),
     Paren(Vec<ArgExpr>),       
     Chunk(String),             
+    Reduce(Box<ReduceExpr>),
 }
 
 #[derive(Debug, Clone)]
