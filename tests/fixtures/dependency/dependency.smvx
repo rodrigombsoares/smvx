@@ -4,7 +4,7 @@ VAR
   -- In a single-pass compiler, this would crash because 'triggers'
   -- hasn't been defined yet, so its length is unknown!
   nodes := [node(0, triggers[0])];
-  for i := 1..2 do
+  for i := 1..3 do
     nodes.append(node({{i}}, triggers[i]));
   od;
 DEFINE

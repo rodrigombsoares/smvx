@@ -1,7 +1,7 @@
 -- TODO: Comments with list indexing inside ir are broken
 -- TODO: Fix line breaks on global removal
 GLOBAL 
-  BITS : 2;
+  BITS : 3;
   UNUSED : 0;
 
 MODULE main

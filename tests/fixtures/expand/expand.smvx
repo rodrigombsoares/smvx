@@ -1,12 +1,12 @@
 -- Jumping frog game
 MODULE main
 VAR
-  pos : {expand!(L{i}, i := 1..5)};
+  pos : {expand!(L{i}, i := 1..6)};
 
 ASSIGN
   init(pos) := L1;
   next(pos) := case
-    for i := 1..4 do
+    for i := 1..5 do
       pos = L{i} : L{i+1};
     od;
     pos = L5 : L5;

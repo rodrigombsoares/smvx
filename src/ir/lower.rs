@@ -63,7 +63,7 @@ impl Lowerer {
                         RangeBound::Variable(name) => self.global_vars[name],
                     };
 
-                    for _ in start..=end {
+                    for _ in start..end {
                         self.collect_variables(&loop_.body)?;
                     }
                 }
@@ -319,8 +319,8 @@ impl Lowerer {
         };
         let body_len = l.body.len();
 
-        for i in start..=end {
-            let is_last_iter = i == end;
+        for i in start..end {
+            let is_last_iter = i == end - 1;
             let previous = self.loop_vars.insert(l.var_name.clone(), i as i32);
             let result = l.body.iter().cloned().enumerate().try_for_each(|(idx, mut chunk)| {
                 // TODO: make this generic
@@ -374,7 +374,7 @@ impl Lowerer {
         };
 
         let mut expanded = String::new();
-        for i in start..=end {
+        for i in start..end {
             let previous = self.loop_vars.insert(expand.loop_var.clone(), i as i32);
             if i > start {
                 expanded.push_str(", ");
