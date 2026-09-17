@@ -107,9 +107,9 @@ reduce_lookahead       = _{ "reduce!" ~ "(" }
 expand_lookahead       = _{ "expand!" ~ sp ~ "(" }
 
 // Raw NuSMV Chunk Catch-All
-raw_char = _{ comment | !(list_unpack | import_lookahead | list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor | global_lookahead | reduce_lookahead | expand_lookahead | id_interpol) ~ ANY }
+raw_char = _{ comment | !(value_interpol | list_unpack | import_lookahead | list_lookahead | list_idx_lookahead | list_append_lookahead | for_lookahead | od_lookahead | dyn_constructor | global_lookahead | reduce_lookahead | expand_lookahead | id_interpol) ~ ANY }
 raw_nusmv_chunk = { raw_char+ }
 
 // SMVX Program
 // TODO: unify this with for_body (deduplicate)
-program = { SOI ~ (global_block | for_loop | reduce_expr | expand_expr | list | list_indexing | list_unpack | list_append | dyn_constructor | import_stmt | id_interpol | raw_nusmv_chunk)* ~ EOI }
+program = { SOI ~ (global_block | value_interpol | for_loop | reduce_expr | expand_expr | list | list_indexing | list_unpack | list_append | dyn_constructor | import_stmt | id_interpol | raw_nusmv_chunk)* ~ EOI }

@@ -16,6 +16,7 @@ pub(crate) enum Chunk {
     ExpandExp(ExpandExpr),
     DynConstructor(DynConstructor),
     Loop(Loop),
+    ValueInterpolation(IndexExpr),
     RawNusmv(String),
 }
 

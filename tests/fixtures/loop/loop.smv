@@ -33,8 +33,8 @@ LTLSPEC
 MODULE radio(my_id)
 VAR
   id : 0..2;
-  -- channel : 0..{{MAX_CH}}; TODO: global replacement
   channel : 0..2;
+
 ASSIGN
   -- IDs remain static
   init(id) := my_id;

@@ -50,6 +50,7 @@ fn parse_chunk(pair: pest::iterators::Pair<Rule>) -> Result<Chunk, Error<Rule>> 
         Rule::reduce_expr => Ok(Chunk::ReduceExp(parse_reduce_expr(pair)?)),
         Rule::id_interpol => Ok(Chunk::IdInterpolation(parse_list_indexing(pair)?)),
         Rule::expand_expr => Ok(Chunk::ExpandExp(parse_expand_expr(pair)?)),
+        Rule::value_interpol => Ok(Chunk::ValueInterpolation(parse_index_expr(pair.into_inner().next().unwrap()))),
         Rule::dyn_constructor => Ok(Chunk::DynConstructor(parse_dyn_constructor(pair)?)),
         Rule::for_loop => Ok(Chunk::Loop(parse_for_loop(pair)?)),
         Rule::raw_nusmv_chunk => Ok(Chunk::RawNusmv(pair.as_str().to_string())),

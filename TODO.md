@@ -36,7 +36,7 @@
     for i := 1..servers_amt do
     ```
     - for loops should support globals as start/end index
-- [ ] Identifier interpolation for globals (currently only inside arg_expr)
+- [X] Identifier interpolation for globals (currently only inside arg_expr)
 
 ## IR
 - [X] Two passes in the lowerer

@@ -31,8 +31,8 @@ LTLSPEC
 MODULE radio(my_id)
 VAR
   id : 0..2;
-  -- channel : 0..{{MAX_CH}}; TODO: global replacement
-  channel : 0..2;
+  channel : 0..{{MAX_CH}};
+
 ASSIGN
   -- IDs remain static
   init(id) := my_id;
@@ -41,6 +41,6 @@ ASSIGN
   -- Radios hop channels round-robin
   init(channel) := my_id;
   next(channel) := case
-    channel = 2 : 0;
+    channel = {{MAX_CH}} : 0;
     TRUE : channel + 1;
   esac;

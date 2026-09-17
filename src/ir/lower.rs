@@ -172,6 +172,7 @@ impl Lowerer {
                 let rendered = self.render_id_interpol(&id_interpol)?;
                 Ok(vec![LoweredChunk::Raw(rendered)])
             }
+            Chunk::ValueInterpolation(index) => Ok(vec![LoweredChunk::Raw(self.evaluate_index(&index)?.to_string())]),
             Chunk::ExpandExp(expand) => {
                 let rendered = self.render_expand_expr(&expand)?;
                 Ok(vec![LoweredChunk::Raw(rendered)])
@@ -292,7 +293,11 @@ impl Lowerer {
 
     fn evaluate_index(&self, index: &IndexExpr) -> Result<i32, LowerError> {
         let operand_value = |operand: &str| {
-            operand.parse::<i32>().ok().or_else(|| self.loop_vars.get(operand).copied())
+            operand
+                .parse::<i32>()
+                .ok()
+                .or_else(|| self.loop_vars.get(operand).copied())
+                .or_else(|| self.global_vars.get(operand).map(|&value| value as i32))
                 .ok_or_else(|| LowerError::UnknownLoopVariable { name: operand.to_string() })
         };
 
