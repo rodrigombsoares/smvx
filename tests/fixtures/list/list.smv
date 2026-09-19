@@ -6,11 +6,18 @@ MODULE main
     server3 : server_node(FALSE);
     server4 : server_node(server0.active);
     master_server : server_node(server0.active);
-    monitor : monitor_node(server0, server1, server2, server3, server4)
+    monitor : monitor_node(server0, server1, server2, server3, server4);
 
   DEFINE
-    some_server := master_server.active != server0.active;
-    test_forward := 1 != 0;
+    server_role0 := case
+        server0.active : MASTER;
+        TRUE : REPLICA;
+      esac;
+    server_role1 := case
+        (server1.active = server0.active) & !(server1.is_sync) : ORPHAN;
+        server1.active : REPLICA;
+        TRUE : OFFLINE;
+      esac;
 
 MODULE server_node(is_master)
   VAR

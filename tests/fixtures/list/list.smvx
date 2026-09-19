@@ -4,11 +4,22 @@ MODULE main
     servers.append(server_node(FALSE));
     servers.append(server_node(servers[0].active));
     master_server : server_node(servers[0].active);
-    monitor : monitor_node(...servers)
+    monitor : monitor_node(...servers);
 
   DEFINE
-    some_server := master_server.active != servers[0].active;
-    test_forward := 1 != 0;
+    server_roles := [
+      case
+        servers[0].active : MASTER;
+        TRUE : REPLICA;
+      esac
+    ];
+    server_roles.append(
+      case
+        (servers[1].active = servers[0].active) & !(servers[1].is_sync) : ORPHAN;
+        servers[1].active : REPLICA;
+        TRUE : OFFLINE;
+      esac
+    );
 
 MODULE server_node(is_master)
   VAR

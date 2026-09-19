@@ -140,7 +140,10 @@ impl Lowerer {
                         .assign_op
                         .clone();
                     let var_name = format!("{}{}", name, next_index);
-                    let value = self.render_append_element(&append.element)?;
+                        let value = self
+                            .render_append_element(&append.element)?
+                            .trim()
+                            .to_string();
                     self.list_next_indices.insert(name, next_index + 1);
                     Ok(vec![LoweredChunk::VarDecl {
                         indent: append.indent,

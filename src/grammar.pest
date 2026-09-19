@@ -24,7 +24,7 @@ global_block = { "GLOBAL" ~ sp_nl ~ global_decl* }
 // List definition
 assign_op = { ":=" | ":" }
 list = { indent ~ var_name ~ sp ~ assign_op ~ sp ~ list_val ~ sp ~ ";" ~ (ws* ~ newline)? }
-list_chunk = @{ (!(list_idx_lookahead | "[" | "]" | "," | ";" | "(" | ")") ~ ANY)+ }
+list_chunk = @{ (!(list_idx_lookahead | "[" | "]" | "," | "(" | ")") ~ ANY)+ }
 list_indexed_value = { list_indexing ~ list_chunk? }
 list_element = { (list_indexed_value | paren_expr | list_chunk)+ }
 
@@ -52,13 +52,13 @@ dyn_constructor  = {
 }
 
 // List append and Argument structures
-arg_chunk = @{ (!("(" | ")" | ";" | list_idx_lookahead | reduce_lookahead) ~ ANY)+ }
+arg_chunk = @{ (!("(" | ")" | list_idx_lookahead | reduce_lookahead) ~ ANY)+ }
 paren_expr = { "(" ~ sp ~ arg_expr* ~ sp ~ ")" }
 value_interpol = { "{{" ~ sp ~ list_idx ~ sp ~ "}}" }
 arg_expr = _{ list_indexing | value_interpol | paren_expr | reduce_expr | arg_chunk }
 
 append_element = { dyn_constructor | arg_expr+ }
-list_append = { indent ~ var_name ~ sp ~ "." ~ sp ~ "append" ~ sp ~ "(" ~ sp ~ append_element ~ sp ~ ")" ~ sp ~ ";" ~ (ws* ~ newline)* }
+list_append = { indent ~ var_name ~ sp ~ "." ~ sp ~ "append" ~ sp ~ "(" ~ sp_nl ~ append_element ~ sp_nl ~ ")" ~ sp ~ ";" ~ (ws* ~ newline)? }
 
 // For loops (do ... od;)
 loop_var = @{ identifier_char+ }
