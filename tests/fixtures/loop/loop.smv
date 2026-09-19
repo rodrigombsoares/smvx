@@ -6,6 +6,12 @@ VAR
   radio2 : radio(2);
 
 
+  -- 1b. Reduce inside a loop append argument
+  collision_monitor0 : collision_monitor(TRUE, radio0.id != radio0.id & radio0.channel = radio0.channel | radio0.id != radio1.id & radio0.channel = radio1.channel | radio0.id != radio2.id & radio0.channel = radio2.channel);
+  collision_monitor1 : collision_monitor(TRUE, radio1.id != radio0.id & radio1.channel = radio0.channel | radio1.id != radio1.id & radio1.channel = radio1.channel | radio1.id != radio2.id & radio1.channel = radio2.channel);
+  collision_monitor2 : collision_monitor(TRUE, radio2.id != radio0.id & radio2.channel = radio0.channel | radio2.id != radio1.id & radio2.channel = radio1.channel | radio2.id != radio2.id & radio2.channel = radio2.channel);
+
+
 DEFINE
   -- 2. NESTED LOOPS inside a raw chunk
   -- Dynamically builds a combinatorial switch statement checking all pairs
@@ -59,3 +65,10 @@ ASSIGN
     channel = 2 : 0;
     TRUE : channel + 1;
   esac;
+
+MODULE collision_monitor(enabled, any_collision)
+VAR
+  active : boolean;
+ASSIGN
+  init(active) := enabled & any_collision;
+  next(active) := active;

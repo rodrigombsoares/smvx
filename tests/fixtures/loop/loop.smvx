@@ -10,6 +10,12 @@ VAR
     radios.append(radio({{i}}));
   od;
 
+  -- 1b. Reduce inside a loop append argument
+  collision_monitors := [];
+  for i := 0..MAX_IDX do
+    collision_monitors.append(collision_monitor(TRUE, reduce!(|, j := 0..MAX_IDX, radios[i].id != radios[j].id & radios[i].channel = radios[j].channel)));
+  od;
+
 DEFINE
   -- 2. NESTED LOOPS inside a raw chunk
   -- Dynamically builds a combinatorial switch statement checking all pairs
@@ -61,3 +67,10 @@ ASSIGN
     channel = {{MAX_CH}} : 0;
     TRUE : channel + 1;
   esac;
+
+MODULE collision_monitor(enabled, any_collision)
+VAR
+  active : boolean;
+ASSIGN
+  init(active) := enabled & any_collision;
+  next(active) := active;

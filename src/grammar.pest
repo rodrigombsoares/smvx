@@ -51,7 +51,7 @@ dyn_constructor  = {
 }
 
 // List append and Argument structures
-arg_chunk = @{ (!("(" | ")" | ";" | list_idx_lookahead) ~ ANY)+ }
+arg_chunk = @{ (!("(" | ")" | ";" | list_idx_lookahead | reduce_lookahead) ~ ANY)+ }
 paren_expr = { "(" ~ sp ~ arg_expr* ~ sp ~ ")" }
 value_interpol = { "{{" ~ sp ~ list_idx ~ sp ~ "}}" }
 arg_expr = _{ list_indexing | value_interpol | paren_expr | reduce_expr | arg_chunk }
