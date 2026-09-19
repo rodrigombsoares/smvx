@@ -87,9 +87,11 @@ pub(crate) struct DynConstructor {
 pub(crate) enum ArgExpr {
     ListIdx(ListIdx),
     ValueInterpolation(IndexExpr),
+    IdInterpolation(ListIdx),
     Paren(Vec<ArgExpr>),
     Chunk(String),
     Reduce(Box<ReduceExpr>),
+    Loop(Box<Loop>),
 }
 
 #[derive(Debug, Clone)]

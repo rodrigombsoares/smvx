@@ -286,6 +286,7 @@ impl Lowerer {
                 Ok(format!("{}{}", name, index))
             }
             ArgExpr::ValueInterpolation(index) => Ok(self.evaluate_index(index)?.to_string()),
+            ArgExpr::IdInterpolation(id) => self.render_id_interpol(id),
             ArgExpr::Paren(exprs) => {
                 let inner = exprs
                     .iter()
@@ -300,6 +301,10 @@ impl Lowerer {
                 raw.clone()
             }),
             ArgExpr::Reduce(reduce) => self.render_reduce_expr(reduce),
+            ArgExpr::Loop(loop_) => {
+                let chunks = self.lower_loop(loop_)?;
+                Ok(stringify_lowered_chunks(&chunks))
+            }
         }
     }
 
@@ -318,7 +323,6 @@ impl Lowerer {
         let mut lowered_chunks = Vec::new();
         let start = self.evaluate_range_bound(&l.start)?;
         let end = self.evaluate_range_bound(&l.end)?;
-        let body_len = l.body.len();
         // If the body's first real content is a self-indenting chunk (it renders its own
         // indent), the leading whitespace-only raw chunk before it must be dropped entirely
         // instead of replaced with `l.indent`, otherwise the line gets indented twice.
@@ -328,7 +332,6 @@ impl Lowerer {
         );
 
         for i in start..end {
-            let is_last_iter = i == end - 1;
             let previous = self.loop_vars.insert(l.var_name.clone(), i as i32);
             let result = l
                 .body
@@ -355,11 +358,6 @@ impl Lowerer {
                             } else {
                                 format!("{}{}", l.indent, trimmed)
                             };
-                        }
-                        // Only the final iteration's trailing newline should survive, otherwise the
-                        // following top-level content's own leading newline creates a blank line.
-                        if idx == body_len - 1 && is_last_iter {
-                            *raw = raw.trim_end_matches('\n').to_string();
                         }
                     }
                     self.lower_chunk(chunk)
@@ -451,4 +449,25 @@ impl Lowerer {
 // singular helper function strips the trailing 's' used to derive a list's flattened variable prefix.
 fn singular(name: &str) -> String {
     name.strip_suffix('s').unwrap_or(name).to_string()
+}
+
+// stringify_lowered_chunks flattens lowered chunks into inline text, for embedding a for-loop's
+// expansion (e.g. inside a case branch) directly into a surrounding expression.
+fn stringify_lowered_chunks(chunks: &[LoweredChunk]) -> String {
+    let mut output = String::new();
+    for chunk in chunks {
+        match chunk {
+            LoweredChunk::Raw(raw) => output.push_str(raw),
+            LoweredChunk::VarDecl {
+                indent,
+                name,
+                assign_op,
+                value,
+            } => {
+                output.push_str(&format!("{}{} {} {};\n", indent, name, assign_op, value));
+            }
+            LoweredChunk::VarRef(ref_name) => output.push_str(ref_name),
+        }
+    }
+    output
 }

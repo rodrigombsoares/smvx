@@ -51,3 +51,16 @@ fn test_parse_smvx_expand() {
     assert!(!smv.is_empty());
     assert_eq!(smv, std::fs::read_to_string(expected_path).unwrap());
 }
+
+#[test]
+fn test_parse_smvx_adhoc() {
+    let file_path = "tests/fixtures/ad-hoc/adhoc.smvx";
+    let expected_path = "tests/fixtures/ad-hoc/adhoc.smv";
+
+    let mut transpiler = SMVXTranspiler::new();
+    let smv = transpiler.transpile(file_path.into()).unwrap();
+
+    print!("{}", smv);
+    assert!(!smv.is_empty());
+    assert_eq!(smv, std::fs::read_to_string(expected_path).unwrap());
+}

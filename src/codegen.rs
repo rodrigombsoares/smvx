@@ -22,3 +22,4 @@ pub(crate) fn generate_smv(ir: &LoweredProgram) -> String {
 
     output
 }
+

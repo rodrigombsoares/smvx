@@ -1,0 +1,35 @@
+GLOBAL
+    NUM_DRONES : 3;
+    NUM_SENSORS : 5;
+
+MODULE main
+    DEFINE
+        drones := [];
+        for i := 0..NUM_DRONES do
+            drones.append(D{i});
+        od;
+
+        change_dir_drones := [];
+        change_dir_drones.append(reduce!(|, l := 0..NUM_DRONES, 0 != {{l}} & drones[0].pos = drones[l].pos & (0 < l & drones[0].is_fwd != drones[l].is_fwd | 0 > l)));
+        for i := 1..NUM_DRONES do
+            change_dir_drones.append(
+                reduce!(|, m := 0..NUM_DRONES, {{i}} != {{m}} & drones[i].pos = drones[m].pos & (i < m & drones[i].is_fwd != drones[m].is_fwd | i > m))
+            );
+        od;
+
+        request_from_drones := [];
+        for i := 0..NUM_DRONES do
+            request_from_drones.append(
+                case
+                    -- If rendezvous and di will return to base, request from the other drone
+                    for j := 0..NUM_DRONES do
+                        {{i}} != {{j}} & drones[i].pos = drones[j].pos & !(drones[i].keep_forward) : D{j};
+                    od;
+                    -- Sensor pickups
+                    for s := 0..NUM_SENSORS do
+                        drones[i].pos = S{s} : S{s};
+                    od;
+                    TRUE : NONE;
+                esac
+            );
+        od;

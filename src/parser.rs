@@ -269,6 +269,7 @@ fn parse_arg_expr(pair: pest::iterators::Pair<Rule>) -> Result<ArgExpr, pest::er
             let idx = parse_index_expr(pair.into_inner().next().unwrap());
             Ok(ArgExpr::ValueInterpolation(idx))
         }
+        Rule::id_interpol => Ok(ArgExpr::IdInterpolation(parse_list_indexing(pair)?)),
         Rule::paren_expr => {
             // Recursively parse arguments inside parentheses
             let mut exprs = Vec::new();
@@ -282,6 +283,7 @@ fn parse_arg_expr(pair: pest::iterators::Pair<Rule>) -> Result<ArgExpr, pest::er
             Ok(ArgExpr::Chunk(pair.as_str().to_string()))
         }
         Rule::reduce_expr => Ok(ArgExpr::Reduce(Box::new(parse_reduce_expr(pair)?))),
+        Rule::for_loop => Ok(ArgExpr::Loop(Box::new(parse_for_loop(pair)?))),
         _ => unreachable!("Unexpected rule in arg_expr: {:?}", pair.as_rule()),
     }
 }

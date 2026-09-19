@@ -7,6 +7,7 @@ VAR
   for i := 1..3 do
     nodes.append(node({{i}}, triggers[i]));
   od;
+
 DEFINE
   -- 2. The DEFINE block evaluates the state of the nodes.
   -- Your Pass 1 phase will register this list first, allowing

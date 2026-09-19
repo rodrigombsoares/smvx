@@ -1,0 +1,55 @@
+MODULE main
+    DEFINE
+        drone0 := D0;
+        drone1 := D1;
+        drone2 := D2;
+
+        change_dir_drone0 := 0 != 0 & drone0.pos = drone0.pos & (0 < l & drone0.is_fwd != drone0.is_fwd | 0 > l) | 0 != 1 & drone0.pos = drone1.pos & (0 < l & drone0.is_fwd != drone1.is_fwd | 0 > l) | 0 != 2 & drone0.pos = drone2.pos & (0 < l & drone0.is_fwd != drone2.is_fwd | 0 > l);
+        change_dir_drone1 := 1 != 0 & drone1.pos = drone0.pos & (i < m & drone1.is_fwd != drone0.is_fwd | i > m) | 1 != 1 & drone1.pos = drone1.pos & (i < m & drone1.is_fwd != drone1.is_fwd | i > m) | 1 != 2 & drone1.pos = drone2.pos & (i < m & drone1.is_fwd != drone2.is_fwd | i > m);
+        change_dir_drone2 := 2 != 0 & drone2.pos = drone0.pos & (i < m & drone2.is_fwd != drone0.is_fwd | i > m) | 2 != 1 & drone2.pos = drone1.pos & (i < m & drone2.is_fwd != drone1.is_fwd | i > m) | 2 != 2 & drone2.pos = drone2.pos & (i < m & drone2.is_fwd != drone2.is_fwd | i > m);
+
+        request_from_drone0 := case
+                    -- If rendezvous and di will return to base, request from the other drone
+                    0 != 0 & drone0.pos = drone0.pos & !(drone0.keep_forward) : D0;
+                    0 != 1 & drone0.pos = drone1.pos & !(drone0.keep_forward) : D1;
+                    0 != 2 & drone0.pos = drone2.pos & !(drone0.keep_forward) : D2;
+
+                    -- Sensor pickups
+                    drone0.pos = S0 : S0;
+                    drone0.pos = S1 : S1;
+                    drone0.pos = S2 : S2;
+                    drone0.pos = S3 : S3;
+                    drone0.pos = S4 : S4;
+
+                    TRUE : NONE;
+                esac;
+        request_from_drone1 := case
+                    -- If rendezvous and di will return to base, request from the other drone
+                    1 != 0 & drone1.pos = drone0.pos & !(drone1.keep_forward) : D0;
+                    1 != 1 & drone1.pos = drone1.pos & !(drone1.keep_forward) : D1;
+                    1 != 2 & drone1.pos = drone2.pos & !(drone1.keep_forward) : D2;
+
+                    -- Sensor pickups
+                    drone1.pos = S0 : S0;
+                    drone1.pos = S1 : S1;
+                    drone1.pos = S2 : S2;
+                    drone1.pos = S3 : S3;
+                    drone1.pos = S4 : S4;
+
+                    TRUE : NONE;
+                esac;
+        request_from_drone2 := case
+                    -- If rendezvous and di will return to base, request from the other drone
+                    2 != 0 & drone2.pos = drone0.pos & !(drone2.keep_forward) : D0;
+                    2 != 1 & drone2.pos = drone1.pos & !(drone2.keep_forward) : D1;
+                    2 != 2 & drone2.pos = drone2.pos & !(drone2.keep_forward) : D2;
+
+                    -- Sensor pickups
+                    drone2.pos = S0 : S0;
+                    drone2.pos = S1 : S1;
+                    drone2.pos = S2 : S2;
+                    drone2.pos = S3 : S3;
+                    drone2.pos = S4 : S4;
+
+                    TRUE : NONE;
+                esac;

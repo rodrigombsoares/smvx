@@ -52,10 +52,10 @@ dyn_constructor  = {
 }
 
 // List append and Argument structures
-arg_chunk = @{ (!("(" | ")" | list_idx_lookahead | reduce_lookahead) ~ ANY)+ }
+arg_chunk = @{ (!("(" | ")" | list_idx_lookahead | reduce_lookahead | for_lookahead | od_lookahead | value_interpol | id_interpol) ~ ANY)+ }
 paren_expr = { "(" ~ sp ~ arg_expr* ~ sp ~ ")" }
 value_interpol = { "{{" ~ sp ~ list_idx ~ sp ~ "}}" }
-arg_expr = _{ list_indexing | value_interpol | paren_expr | reduce_expr | arg_chunk }
+arg_expr = _{ list_indexing | value_interpol | id_interpol | paren_expr | reduce_expr | for_loop | arg_chunk }
 
 append_element = { dyn_constructor | arg_expr+ }
 list_append = { indent ~ var_name ~ sp ~ "." ~ sp ~ "append" ~ sp ~ "(" ~ sp_nl ~ append_element ~ sp_nl ~ ")" ~ sp ~ ";" ~ (ws* ~ newline)? }
@@ -66,7 +66,7 @@ range_math = { "(" ~ sp ~ index_math ~ sp ~ ")" | index_math }
 range_start = { range_math | number | var_name }
 range_end = { range_math | number | var_name }
 
-for_body = _{ for_loop | reduce_expr | expand_expr | list | list_indexing | list_unpack | list_append | dyn_constructor | import_stmt | id_interpol | raw_nusmv_chunk }
+for_body = _{ for_stmt | reduce_expr | expand_expr | list | value_interpol | list_indexing | list_unpack | list_append | dyn_constructor | import_stmt | id_interpol | raw_nusmv_chunk }
 // No sp_nl separator between "do" and the body, or between body items: raw_nusmv_chunk
 // must capture inter-item whitespace/newlines itself, otherwise indentation and spacing is lost.
 for_loop = { 
@@ -74,6 +74,8 @@ for_loop = {
     for_body* ~ 
     sp ~ "od" ~ sp ~ ";"
 }
+// Statement-level loop: consumes its trailing newline, unlike a for_loop nested inside arg_expr (append/case/reduce).
+for_stmt = _{ for_loop ~ (ws* ~ newline)? }
 
 // List reduce - Macro
 reduce_op = { "|" | "&" | "xor" | "+" | "*" }
@@ -114,4 +116,4 @@ raw_nusmv_chunk = { raw_char+ }
 
 // SMVX Program
 // TODO: unify this with for_body (deduplicate)
-program = { SOI ~ (global_block | value_interpol | for_loop | reduce_expr | expand_expr | list | list_indexing | list_unpack | list_append | dyn_constructor | import_stmt | id_interpol | raw_nusmv_chunk)* ~ EOI }
+program = { SOI ~ (global_block | value_interpol | for_stmt | reduce_expr | expand_expr | list | list_indexing | list_unpack | list_append | dyn_constructor | import_stmt | id_interpol | raw_nusmv_chunk)* ~ EOI }
