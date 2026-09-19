@@ -274,10 +274,13 @@ fn parse_for_loop(pair: pest::iterators::Pair<Rule>) -> Result<Loop, pest::error
 }
 
 fn parse_range_bound(pair: pest::iterators::Pair<Rule>) -> RangeBound {
-    let pair_str = pair.as_str().to_string();
-    let rule = pair.into_inner().next().unwrap().as_rule();
-    match rule {
-        Rule::var_name => RangeBound::Variable(pair_str),
-        _ => RangeBound::Number(pair_str.parse::<i64>().unwrap()),
+    let inner = pair.into_inner().next().unwrap();
+    match inner.as_rule() {
+        Rule::var_name => RangeBound::Variable(inner.as_str().to_string()),
+        Rule::number => RangeBound::Number(inner.as_str().parse::<i64>().unwrap()),
+        Rule::range_math => {
+            RangeBound::Math(parse_index_expr(inner.into_inner().next().unwrap()))
+        }
+        _ => unreachable!("Unexpected rule in range bound: {:?}", inner.as_rule()),
     }
 }

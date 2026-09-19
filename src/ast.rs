@@ -104,6 +104,7 @@ pub(crate) struct Loop {
 pub(crate) enum RangeBound {
     Number(i64),
     Variable(String),
+    Math(IndexExpr),
 }
 
 #[derive(Debug, Clone)]

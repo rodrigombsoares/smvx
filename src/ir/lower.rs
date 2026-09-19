@@ -54,17 +54,21 @@ impl Lowerer {
                     }
                 }
                 Chunk::Loop(loop_) => {
-                    let start = match &loop_.start {
-                        RangeBound::Number(value) => *value,
-                        RangeBound::Variable(name) => self.global_vars[name],
-                    };
-                    let end = match &loop_.end {
-                        RangeBound::Number(value) => *value,
-                        RangeBound::Variable(name) => self.global_vars[name],
-                    };
+                    let start = self.evaluate_range_bound(&loop_.start)?;
+                    let end = self.evaluate_range_bound(&loop_.end)?;
 
-                    for _ in start..end {
-                        self.collect_variables(&loop_.body)?;
+                    for i in start..end {
+                        let previous = self.loop_vars.insert(loop_.var_name.clone(), i as i32);
+                        let result = self.collect_variables(&loop_.body);
+                        match previous {
+                            Some(value) => {
+                                self.loop_vars.insert(loop_.var_name.clone(), value);
+                            }
+                            None => {
+                                self.loop_vars.remove(&loop_.var_name);
+                            }
+                        }
+                        result?;
                     }
                 }
                 _ => {}
@@ -192,14 +196,8 @@ impl Lowerer {
     }
 
     fn render_reduce_expr(&mut self, reduce: &ReduceExpr) -> Result<String, LowerError> {
-        let start = match &reduce.range_start {
-            RangeBound::Number(val) => *val,
-            RangeBound::Variable(val) => self.global_vars[val],
-        };
-        let end = match &reduce.range_end {
-            RangeBound::Number(val) => *val,
-            RangeBound::Variable(val) => self.global_vars[val],
-        };
+        let start = self.evaluate_range_bound(&reduce.range_start)?;
+        let end = self.evaluate_range_bound(&reduce.range_end)?;
         let mut reduced = String::new();
         for i in start..end {
             let previous = self.loop_vars.insert(reduce.loop_var.clone(), i as i32);
@@ -291,39 +289,10 @@ impl Lowerer {
         Ok(())
     }
 
-    fn evaluate_index(&self, index: &IndexExpr) -> Result<i32, LowerError> {
-        let operand_value = |operand: &str| {
-            operand
-                .parse::<i32>()
-                .ok()
-                .or_else(|| self.loop_vars.get(operand).copied())
-                .or_else(|| self.global_vars.get(operand).map(|&value| value as i32))
-                .ok_or_else(|| LowerError::UnknownLoopVariable { name: operand.to_string() })
-        };
-
-        match index {
-            IndexExpr::Operand(operand) => operand_value(operand),
-            IndexExpr::Math { left, op, right } => {
-                let left = operand_value(left)?;
-                let right = operand_value(right)?;
-                match op {
-                    MathOperator::Add => Ok(left + right),
-                    MathOperator::Sub => Ok(left - right),
-                }
-            }
-        }
-    }
-
     fn lower_loop(&mut self, l: &Loop) -> Result<Vec<LoweredChunk>, LowerError> {
         let mut lowered_chunks = Vec::new();
-        let start = match &l.start {
-            RangeBound::Number(val) => *val,
-            RangeBound::Variable(val) => self.global_vars[val],
-        };
-        let end = match &l.end {
-            RangeBound::Number(val) => *val,
-            RangeBound::Variable(val) => self.global_vars[val],
-        };
+        let start = self.evaluate_range_bound(&l.start)?;
+        let end = self.evaluate_range_bound(&l.end)?;
         let body_len = l.body.len();
         // If the body's first real content is a self-indenting chunk (it renders its own
         // indent), the leading whitespace-only raw chunk before it must be dropped entirely
@@ -386,14 +355,8 @@ impl Lowerer {
     }
 
     fn render_expand_expr(&mut self, expand: &ExpandExpr) -> Result<String, LowerError> {
-        let start = match &expand.range_start {
-            RangeBound::Number(val) => *val,
-            RangeBound::Variable(val) => self.global_vars[val],
-        };
-        let end = match &expand.range_end {
-            RangeBound::Number(val) => *val,
-            RangeBound::Variable(val) => self.global_vars[val],
-        };
+        let start = self.evaluate_range_bound(&expand.range_start)?;
+        let end = self.evaluate_range_bound(&expand.range_end)?;
 
         let mut expanded = String::new();
         for i in start..end {
@@ -414,6 +377,39 @@ impl Lowerer {
         }
 
         Ok(expanded)
+    }
+
+    fn evaluate_range_bound(&self, bound: &RangeBound) -> Result<i64, LowerError> {
+        match bound {
+            RangeBound::Number(value) => Ok(*value),
+            RangeBound::Variable(name) => self.global_vars.get(name).copied().ok_or_else(|| {
+                LowerError::UnknownLoopVariable { name: name.clone() }
+            }),
+            RangeBound::Math(index) => Ok(i64::from(self.evaluate_index(index)?)),
+        }
+    }
+
+    fn evaluate_index(&self, index: &IndexExpr) -> Result<i32, LowerError> {
+        let operand_value = |operand: &str| {
+            operand
+                .parse::<i32>()
+                .ok()
+                .or_else(|| self.loop_vars.get(operand).copied())
+                .or_else(|| self.global_vars.get(operand).map(|&value| value as i32))
+                .ok_or_else(|| LowerError::UnknownLoopVariable { name: operand.to_string() })
+        };
+
+        match index {
+            IndexExpr::Operand(operand) => operand_value(operand),
+            IndexExpr::Math { left, op, right } => {
+                let left = operand_value(left)?;
+                let right = operand_value(right)?;
+                match op {
+                    MathOperator::Add => Ok(left + right),
+                    MathOperator::Sub => Ok(left - right),
+                }
+            }
+        }
     }
 }
 

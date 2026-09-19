@@ -22,6 +22,22 @@ DEFINE
     TRUE : FALSE;
   esac;
 
+  upper_triangle_collision := case
+    radio0.id != radio1.id & radio0.channel = radio1.channel : TRUE;
+    radio0.id != radio2.id & radio0.channel = radio2.channel : TRUE;
+    radio1.id != radio2.id & radio1.channel = radio2.channel : TRUE;
+
+    TRUE : FALSE;
+  esac;
+
+  upper_triangle_collision_grouped := case
+    radio0.id != radio1.id & radio0.channel = radio1.channel : TRUE;
+    radio0.id != radio2.id & radio0.channel = radio2.channel : TRUE;
+    radio1.id != radio2.id & radio1.channel = radio2.channel : TRUE;
+
+    TRUE : FALSE;
+  esac;
+
 LTLSPEC
   -- 3. NESTED REDUCE! MACROS
   -- "Globally, it is never the case that ANY radio i collides with ANY radio j"
