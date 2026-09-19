@@ -17,7 +17,7 @@ fn test_parse_smvx_list() {
 fn test_parse_smvx_loop() {
     let file_path = "tests/fixtures/loop/loop.smvx";
     let expected_path = "tests/fixtures/loop/loop.smv";
-    
+
     let mut transpiler = SMVXTranspiler::new();
     let smv = transpiler.transpile(file_path.into()).unwrap();
 
@@ -30,7 +30,7 @@ fn test_parse_smvx_loop() {
 fn test_parse_smvx_import() {
     let file_path = "tests/fixtures/import/main.smvx";
     let expected_path = "tests/fixtures/import/import.smv";
-    
+
     let mut transpiler = SMVXTranspiler::new();
     let smv = transpiler.transpile(file_path.into()).unwrap();
 
@@ -43,7 +43,7 @@ fn test_parse_smvx_import() {
 fn test_parse_smvx_expand() {
     let file_path = "tests/fixtures/expand/expand.smvx";
     let expected_path = "tests/fixtures/expand/expand.smv";
-    
+
     let mut transpiler = SMVXTranspiler::new();
     let smv = transpiler.transpile(file_path.into()).unwrap();
 

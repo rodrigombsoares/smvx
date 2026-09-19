@@ -57,5 +57,8 @@ fn test_cli_missing_required_args() {
         .output()
         .expect("Failed to execute smvx CLI binary");
 
-    assert!(!output.status.success(), "CLI should fail when missing arguments");
+    assert!(
+        !output.status.success(),
+        "CLI should fail when missing arguments"
+    );
 }

@@ -14,4 +14,3 @@ fn test_lower_picks_var_declare() {
     assert!(!smv.is_empty());
     assert_eq!(smv, std::fs::read_to_string(expected_path).unwrap());
 }
-

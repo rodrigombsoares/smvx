@@ -14,7 +14,6 @@ DEFINE
   trigger0 := node1.active;
   trigger1 := node2.active;
   trigger2 := node0.active;
-
 LTLSPEC
   -- 3. We can even test our new reduce! macro here
   -- "Eventually, all nodes in the ring will be active"

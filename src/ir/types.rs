@@ -6,6 +6,11 @@ pub(crate) struct LoweredProgram {
 #[derive(Debug, Clone)]
 pub(crate) enum LoweredChunk {
     Raw(String),
-    VarDecl { indent: String, name: String, value: String }, // Flattened declarations
-    VarRef(String),                                          // Flattened references
+    VarDecl {
+        indent: String,
+        name: String,
+        assign_op: String,
+        value: String,
+    }, // Flattened declarations
+    VarRef(String), // Flattened references
 }

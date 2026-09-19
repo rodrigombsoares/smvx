@@ -3,7 +3,7 @@ import "counter_false.smvx";
 
 MODULE main
 VAR
-  bits := [counter_cell(TRUE)];
+  bits : [counter_cell(TRUE)];
   for i := 1..3 do
     bits.append(counter_cell(bits[i-1]));
   od;

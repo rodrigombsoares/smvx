@@ -1,30 +1,33 @@
 use std::{collections::HashMap, vec};
 
-use crate::ast::{
-    Program, Chunk, ArgExpr, AppendElement, 
-    DynConstructor, IndexExpr, Loop, MathOperator,
-    RangeBound, ReduceExpr, ListIdx, ExpandExpr
-};
 use super::{LowerError, LoweredChunk, LoweredProgram};
+use crate::ast::{
+    AppendElement, ArgExpr, Chunk, DynConstructor, ExpandExpr, IndexExpr, ListIdx, Loop,
+    MathOperator, Program, RangeBound, ReduceExpr,
+};
+
+#[derive(Debug, Clone)]
+struct ListMetadata {
+    length: usize,
+    assign_op: String,
+}
 
 // Lower does the lowering process, transforming the AST into a flattened IR representation.
 // stores the current state of list lengths and loop variables during the lowering process.
 pub(crate) struct Lowerer {
-    list_lengths: HashMap<String, usize>,
+    lists: HashMap<String, ListMetadata>,
     list_next_indices: HashMap<String, usize>,
     loop_vars: HashMap<String, i32>,
     global_vars: HashMap<String, i64>,
-    in_define_block: bool,
 }
 
 impl Lowerer {
     pub(crate) fn new() -> Self {
         Lowerer {
-            list_lengths: HashMap::new(),
+            lists: HashMap::new(),
             list_next_indices: HashMap::new(),
             loop_vars: HashMap::new(),
             global_vars: HashMap::new(),
-            in_define_block: false,
         }
     }
 
@@ -38,14 +41,22 @@ impl Lowerer {
             match chunk {
                 Chunk::ListDef(def) => {
                     let name: String = singular(&def.name);
-                    self.list_lengths.insert(name, def.elements.len());
+                    self.lists.insert(
+                        name,
+                        ListMetadata {
+                            length: def.elements.len(),
+                            assign_op: def.assign_op.clone(),
+                        },
+                    );
                 }
                 Chunk::ListAppend(ap) => {
                     let name: String = singular(&ap.name);
-                    if let Some(&length) = self.list_lengths.get(&name) {
-                        self.list_lengths.insert(name, length + 1);
+                    if let Some(metadata) = self.lists.get_mut(&name) {
+                        metadata.length += 1;
                     } else {
-                        return Err(LowerError::ListNotDefined { name: ap.name.clone() });
+                        return Err(LowerError::ListNotDefined {
+                            name: ap.name.clone(),
+                        });
                     }
                 }
                 Chunk::Global(def) => {
@@ -84,45 +95,59 @@ impl Lowerer {
             lowered_chunks.extend(self.lower_chunk(chunk)?);
         }
 
-        Ok(LoweredProgram { chunks: lowered_chunks })
+        Ok(LoweredProgram {
+            chunks: lowered_chunks,
+        })
     }
 
     fn lower_chunk(&mut self, chunk: Chunk) -> Result<Vec<LoweredChunk>, LowerError> {
         match chunk {
-            Chunk::RawNusmv(raw) => {
-                self.update_block_context(&raw);
-                Ok(vec![LoweredChunk::Raw(raw)])
-            }
-            Chunk::Global(_) => {
-                Ok(vec![])
-            }
+            Chunk::RawNusmv(raw) => Ok(vec![LoweredChunk::Raw(raw)]),
+            Chunk::Global(_) => Ok(vec![]),
             Chunk::ListDef(def) => {
                 let name = singular(&def.name);
                 let indent = def.indent;
-                self.list_next_indices.insert(name.clone(), def.elements.len());
+                let assign_op = def.assign_op;
+                self.list_next_indices
+                    .insert(name.clone(), def.elements.len());
                 let mut declarations = Vec::with_capacity(def.elements.len());
                 for (i, element) in def.elements.into_iter().enumerate() {
                     let var_name = format!("{}{}", name, i);
-                    let value = element.iter()
+                    let value = element
+                        .iter()
                         .map(|expr| self.render_arg_expr(expr))
                         .collect::<Result<String, _>>()?
                         .trim()
                         .to_string();
-                    if self.in_define_block {
-                        declarations.push(LoweredChunk::Raw(format!("{}{} := {};\n", indent, var_name, value)));
-                    } else {
-                        declarations.push(LoweredChunk::VarDecl { indent: indent.clone(), name: var_name, value });
-                    }
+                    declarations.push(LoweredChunk::VarDecl {
+                        indent: indent.clone(),
+                        name: var_name,
+                        assign_op: assign_op.clone(),
+                        value,
+                    });
                 }
                 Ok(declarations)
             }
             Chunk::ListAppend(append) => {
                 let name = singular(&append.name);
                 if let Some(&next_index) = self.list_next_indices.get(&name) {
+                    let assign_op = self
+                        .lists
+                        .get(&name)
+                        .ok_or_else(|| LowerError::ListNotDefined {
+                            name: append.name.clone(),
+                        })?
+                        .assign_op
+                        .clone();
                     let var_name = format!("{}{}", name, next_index);
                     let value = self.render_append_element(&append.element)?;
                     self.list_next_indices.insert(name, next_index + 1);
-                    Ok(vec![LoweredChunk::VarDecl { indent: append.indent, name: var_name, value }])
+                    Ok(vec![LoweredChunk::VarDecl {
+                        indent: append.indent,
+                        name: var_name,
+                        assign_op,
+                        value,
+                    }])
                 } else {
                     Err(LowerError::ListNotDefined { name: append.name })
                 }
@@ -130,12 +155,14 @@ impl Lowerer {
             Chunk::ListUnpack(list) => {
                 let base_name = singular(&list);
 
-                self.list_lengths
+                self.lists
                     .get(&base_name)
                     .ok_or(LowerError::ListNotDefined { name: list })
-                    .map(|&length| {
+                    .map(|metadata| {
+                        let length = metadata.length;
                         // Pre-allocate the exact capacity needed (length * 2 - 1)
-                        let mut unpacked = Vec::with_capacity(length.saturating_mul(2).saturating_sub(1));
+                        let mut unpacked =
+                            Vec::with_capacity(length.saturating_mul(2).saturating_sub(1));
 
                         for i in 0..length {
                             // Prepend the comma for all elements AFTER the first
@@ -147,10 +174,11 @@ impl Lowerer {
 
                         unpacked
                     })
-            }            
+            }
             Chunk::ListIdx(idx) => {
                 let name = singular(&idx.name);
-                if let Some(&length) = self.list_lengths.get(&name) {
+                if let Some(metadata) = self.lists.get(&name) {
+                    let length = metadata.length;
                     let index = self.evaluate_index(&idx.idx)?;
                     self.validate_index(&name, index, length)?;
                     let var_name = format!("{}{}", name, index);
@@ -176,7 +204,9 @@ impl Lowerer {
                 let rendered = self.render_id_interpol(&id_interpol)?;
                 Ok(vec![LoweredChunk::Raw(rendered)])
             }
-            Chunk::ValueInterpolation(index) => Ok(vec![LoweredChunk::Raw(self.evaluate_index(&index)?.to_string())]),
+            Chunk::ValueInterpolation(index) => Ok(vec![LoweredChunk::Raw(
+                self.evaluate_index(&index)?.to_string(),
+            )]),
             Chunk::ExpandExp(expand) => {
                 let rendered = self.render_expand_expr(&expand)?;
                 Ok(vec![LoweredChunk::Raw(rendered)])
@@ -185,13 +215,13 @@ impl Lowerer {
     }
 
     // render_append_element flattens the value being appended to a list into its final NuSMV text.
-    fn render_append_element(
-        &mut self,
-        element: &AppendElement,
-    ) -> Result<String, LowerError> {
+    fn render_append_element(&mut self, element: &AppendElement) -> Result<String, LowerError> {
         match element {
             AppendElement::DynConstructor(dc) => self.render_dyn_constructor(dc),
-            AppendElement::Exprs(exprs) => exprs.iter().map(|e| self.render_arg_expr(e)).collect::<Result<String, LowerError>>(),
+            AppendElement::Exprs(exprs) => exprs
+                .iter()
+                .map(|e| self.render_arg_expr(e))
+                .collect::<Result<String, LowerError>>(),
         }
     }
 
@@ -205,7 +235,11 @@ impl Lowerer {
             if i > 0 {
                 reduced.push_str(&format!(" {} ", reduce.op));
             }
-            let args = reduce.args.iter().map(|a| self.render_arg_expr(a)).collect::<Result<String, LowerError>>()?;
+            let args = reduce
+                .args
+                .iter()
+                .map(|a| self.render_arg_expr(a))
+                .collect::<Result<String, LowerError>>()?;
             reduced.push_str(&args);
             match previous {
                 Some(value) => {
@@ -220,60 +254,48 @@ impl Lowerer {
         Ok(reduced)
     }
 
-    fn update_block_context(&mut self, raw: &str) {
-        for line in raw.lines() {
-            match line.trim_start() {
-                "DEFINE" => self.in_define_block = true,
-                line if line.starts_with("MODULE")
-                    || line == "VAR"
-                    || line == "IVAR"
-                    || line == "FROZENVAR"
-                    || line == "ASSIGN"
-                    || line == "TRANS"
-                    || line == "INIT"
-                    || line == "INVAR"
-                    || line == "SPEC"
-                    || line == "LTLSPEC"
-                    || line == "CTLSPEC" => self.in_define_block = false,
-                _ => {}
-            }
-        }
-    }
-
     // render_dyn_constructor flattens a dynamic constructor call (e.g. server_node(servers[0].active))
     // into its final NuSMV text.
-    fn render_dyn_constructor(
-        &mut self,
-        dc: &DynConstructor,
-    ) -> Result<String, LowerError> {
-        let args = dc.args.iter().map(|a| self.render_arg_expr(a)).collect::<Result<String, LowerError>>()?;
+    fn render_dyn_constructor(&mut self, dc: &DynConstructor) -> Result<String, LowerError> {
+        let args = dc
+            .args
+            .iter()
+            .map(|a| self.render_arg_expr(a))
+            .collect::<Result<String, LowerError>>()?;
         Ok(format!("{}({})", dc.name, args))
     }
 
     // render_arg_expr resolves an argument of a dynamic constructor into its final NuSMV text,
     // substituting list indexing (e.g. servers[0]) with the flattened variable name (e.g. server0).
-    fn render_arg_expr(
-        &mut self,
-        expr: &ArgExpr,
-    ) -> Result<String, LowerError> {
+    fn render_arg_expr(&mut self, expr: &ArgExpr) -> Result<String, LowerError> {
         // TODO: dedup this code
         match expr {
             ArgExpr::ListIdx(idx) => {
                 let name: String = singular(&idx.name);
-                let Some(&length) = self.list_lengths.get(&name) else {
-                    return Err(LowerError::ListNotDefined { name: idx.name.clone() });
+                let Some(metadata) = self.lists.get(&name) else {
+                    return Err(LowerError::ListNotDefined {
+                        name: idx.name.clone(),
+                    });
                 };
+                let length = metadata.length;
                 let index = self.evaluate_index(&idx.idx)?;
                 self.validate_index(&name, index, length)?;
                 Ok(format!("{}{}", name, index))
             }
             ArgExpr::ValueInterpolation(index) => Ok(self.evaluate_index(index)?.to_string()),
             ArgExpr::Paren(exprs) => {
-                let inner = exprs.iter().map(|e| self.render_arg_expr(e)).collect::<Result<String, _>>()?;
+                let inner = exprs
+                    .iter()
+                    .map(|e| self.render_arg_expr(e))
+                    .collect::<Result<String, _>>()?;
                 Ok(format!("({})", inner))
             }
             // Whitespace-only chunks are formatting artifacts from multi-line reduce!/loop bodies; drop them.
-            ArgExpr::Chunk(raw) => Ok(if raw.trim().is_empty() { String::new() } else { raw.clone() }),
+            ArgExpr::Chunk(raw) => Ok(if raw.trim().is_empty() {
+                String::new()
+            } else {
+                raw.clone()
+            }),
             ArgExpr::Reduce(reduce) => self.render_reduce_expr(reduce),
         }
     }
@@ -305,35 +327,41 @@ impl Lowerer {
         for i in start..end {
             let is_last_iter = i == end - 1;
             let previous = self.loop_vars.insert(l.var_name.clone(), i as i32);
-            let result = l.body.iter().cloned().enumerate().try_for_each(|(idx, mut chunk)| {
-                // TODO: make this generic
-                if let Chunk::ListAppend(ref mut append) = chunk {
-                    append.indent = l.indent.clone();
-                } else if let Chunk::ListDef(ref mut def) = chunk {
-                    def.indent = l.indent.clone();
-                } else if let Chunk::Loop(ref mut inner) = chunk {
-                    // Nested loops must render at the outermost loop's indent, since all the
-                    // surrounding `for`/`od` scaffolding disappears from the emitted output.
-                    inner.indent = l.indent.clone();
-                } else if let Chunk::RawNusmv(ref mut raw) = chunk {
-                    // The leading whitespace/newline captured before the body's first raw text
-                    // is the loop's own indentation, not the emitted line's; restore it explicitly.
-                    if idx == 0 {
-                        let trimmed = raw.trim_start_matches(['\n', ' ', '\t']);
-                        *raw = if trimmed.is_empty() && first_is_self_indenting {
-                            String::new()
-                        } else {
-                            format!("{}{}", l.indent, trimmed)
-                        };
+            let result = l
+                .body
+                .iter()
+                .cloned()
+                .enumerate()
+                .try_for_each(|(idx, mut chunk)| {
+                    // TODO: make this generic
+                    if let Chunk::ListAppend(ref mut append) = chunk {
+                        append.indent = l.indent.clone();
+                    } else if let Chunk::ListDef(ref mut def) = chunk {
+                        def.indent = l.indent.clone();
+                    } else if let Chunk::Loop(ref mut inner) = chunk {
+                        // Nested loops must render at the outermost loop's indent, since all the
+                        // surrounding `for`/`od` scaffolding disappears from the emitted output.
+                        inner.indent = l.indent.clone();
+                    } else if let Chunk::RawNusmv(ref mut raw) = chunk {
+                        // The leading whitespace/newline captured before the body's first raw text
+                        // is the loop's own indentation, not the emitted line's; restore it explicitly.
+                        if idx == 0 {
+                            let trimmed = raw.trim_start_matches(['\n', ' ', '\t']);
+                            *raw = if trimmed.is_empty() && first_is_self_indenting {
+                                String::new()
+                            } else {
+                                format!("{}{}", l.indent, trimmed)
+                            };
+                        }
+                        // Only the final iteration's trailing newline should survive, otherwise the
+                        // following top-level content's own leading newline creates a blank line.
+                        if idx == body_len - 1 && is_last_iter {
+                            *raw = raw.trim_end_matches('\n').to_string();
+                        }
                     }
-                    // Only the final iteration's trailing newline should survive, otherwise the
-                    // following top-level content's own leading newline creates a blank line.
-                    if idx == body_len - 1 && is_last_iter {
-                        *raw = raw.trim_end_matches('\n').to_string();
-                    }
-                }
-                self.lower_chunk(chunk).map(|chunks| lowered_chunks.extend(chunks))
-            });
+                    self.lower_chunk(chunk)
+                        .map(|chunks| lowered_chunks.extend(chunks))
+                });
             match previous {
                 Some(value) => {
                     self.loop_vars.insert(l.var_name.clone(), value);
@@ -382,9 +410,11 @@ impl Lowerer {
     fn evaluate_range_bound(&self, bound: &RangeBound) -> Result<i64, LowerError> {
         match bound {
             RangeBound::Number(value) => Ok(*value),
-            RangeBound::Variable(name) => self.global_vars.get(name).copied().ok_or_else(|| {
-                LowerError::UnknownLoopVariable { name: name.clone() }
-            }),
+            RangeBound::Variable(name) => self
+                .global_vars
+                .get(name)
+                .copied()
+                .ok_or_else(|| LowerError::UnknownLoopVariable { name: name.clone() }),
             RangeBound::Math(index) => Ok(i64::from(self.evaluate_index(index)?)),
         }
     }
@@ -396,7 +426,9 @@ impl Lowerer {
                 .ok()
                 .or_else(|| self.loop_vars.get(operand).copied())
                 .or_else(|| self.global_vars.get(operand).map(|&value| value as i32))
-                .ok_or_else(|| LowerError::UnknownLoopVariable { name: operand.to_string() })
+                .ok_or_else(|| LowerError::UnknownLoopVariable {
+                    name: operand.to_string(),
+                })
         };
 
         match index {

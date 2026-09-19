@@ -29,6 +29,7 @@ pub(crate) struct ImportStmt {
 pub(crate) struct ListDef {
     pub(crate) indent: String,
     pub(crate) name: String,
+    pub(crate) assign_op: String,
     pub(crate) elements: Vec<Vec<ArgExpr>>,
 }
 
@@ -58,13 +59,13 @@ pub(crate) enum MathOperator {
 pub(crate) struct ListAppend {
     pub(crate) indent: String,
     pub(crate) name: String,
-    pub(crate) element: AppendElement, 
+    pub(crate) element: AppendElement,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) enum AppendElement {
     DynConstructor(DynConstructor),
-    Exprs(Vec<ArgExpr>), 
+    Exprs(Vec<ArgExpr>),
 }
 
 #[derive(Debug, Clone)]
@@ -84,10 +85,10 @@ pub(crate) struct DynConstructor {
 
 #[derive(Debug, Clone)]
 pub(crate) enum ArgExpr {
-    ListIdx(ListIdx),          
+    ListIdx(ListIdx),
     ValueInterpolation(IndexExpr),
-    Paren(Vec<ArgExpr>),       
-    Chunk(String),             
+    Paren(Vec<ArgExpr>),
+    Chunk(String),
     Reduce(Box<ReduceExpr>),
 }
 

@@ -22,7 +22,8 @@ global_decl = { sp_nl ~ var_name ~ sp ~ ":" ~ sp ~ global_val ~ sp ~ ";" ~ sp_nl
 global_block = { "GLOBAL" ~ sp_nl ~ global_decl* }
 
 // List definition
-list = { indent ~ var_name ~ sp ~ ":=" ~ sp ~ list_val ~ sp ~ ";" ~ (ws* ~ newline)? }
+assign_op = { ":=" | ":" }
+list = { indent ~ var_name ~ sp ~ assign_op ~ sp ~ list_val ~ sp ~ ";" ~ (ws* ~ newline)? }
 list_chunk = @{ (!(list_idx_lookahead | "[" | "]" | "," | ";" | "(" | ")") ~ ANY)+ }
 list_indexed_value = { list_indexing ~ list_chunk? }
 list_element = { (list_indexed_value | paren_expr | list_chunk)+ }
@@ -97,7 +98,7 @@ expand_expr = {
 
 // --- LOOKAHEADS ---
 import_lookahead       = _{ indent ~ "import" ~ sp ~ "\"" }
-list_lookahead         = _{ indent ~ var_name ~ sp ~ ":=" ~ sp ~ "[" }
+list_lookahead         = _{ indent ~ var_name ~ sp ~ assign_op ~ sp ~ "[" }
 list_idx_lookahead     = _{ var_name ~ sp ~ "[" }
 list_append_lookahead  = _{ indent ~ var_name ~ sp ~ "." ~ sp ~ "append" }
 for_lookahead          = _{ indent ~ "for" ~ ws+ ~ identifier_char+ ~ sp ~ ":=" }

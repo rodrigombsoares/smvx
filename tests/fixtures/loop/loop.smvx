@@ -5,13 +5,13 @@ GLOBAL
 MODULE main
 VAR
   -- 1. Standard single loop for instantiation
-  radios := [radio(0)];
+  radios : [radio(0)];
   for i := 1..MAX_IDX do
     radios.append(radio({{i}}));
   od;
 
   -- 1b. Reduce inside a loop append argument
-  collision_monitors := [];
+  collision_monitors : [];
   for i := 0..MAX_IDX do
     collision_monitors.append(collision_monitor(TRUE, reduce!(|, j := 0..MAX_IDX, radios[i].id != radios[j].id & radios[i].channel = radios[j].channel)));
   od;

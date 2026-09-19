@@ -1,12 +1,12 @@
 use std::collections::HashSet;
-use std::path::PathBuf;
 use std::error::Error;
+use std::path::PathBuf;
 
-use crate::parser::parse_program;
-use crate::codegen::generate_smv;
 use crate::ast::Chunk;
 use crate::ast::Program;
+use crate::codegen::generate_smv;
 use crate::ir::Lowerer;
+use crate::parser::parse_program;
 
 pub struct SMVXTranspiler {
     visited_imports: HashSet<PathBuf>,
@@ -19,12 +19,9 @@ impl SMVXTranspiler {
         }
     }
 
-    // collect_chunks recursively collects all chunks from the given file and its imports, 
+    // collect_chunks recursively collects all chunks from the given file and its imports,
     // while avoiding duplicate imports
-    fn collect_chunks(
-        &mut self,
-        file_path: PathBuf,
-    ) -> Result<Vec<Chunk>, Box<dyn Error>> {
+    fn collect_chunks(&mut self, file_path: PathBuf) -> Result<Vec<Chunk>, Box<dyn Error>> {
         let file_path = std::fs::canonicalize(file_path)?;
 
         // Handles duplicate imports
@@ -44,7 +41,7 @@ impl SMVXTranspiler {
         for chunk in parsed.chunks {
             match chunk {
                 Chunk::Import(import) => {
-                    // adding to a queue so that main module comes first in the output, 
+                    // adding to a queue so that main module comes first in the output,
                     // and imported modules come after
                     import_paths.push(base_path.join(import.path));
                 }
@@ -71,10 +68,7 @@ impl SMVXTranspiler {
         Ok(chunks)
     }
 
-    pub fn transpile(
-        &mut self,
-        file_path: PathBuf,
-    ) -> Result<String, Box<dyn Error>> {
+    pub fn transpile(&mut self, file_path: PathBuf) -> Result<String, Box<dyn Error>> {
         let chunks = self.collect_chunks(file_path)?;
 
         let ast = Program { chunks };

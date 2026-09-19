@@ -1,8 +1,8 @@
 use clap::Parser;
-use std::path::PathBuf;
+use smvx::transpiler::SMVXTranspiler;
 use std::fs::File;
 use std::io::Write;
-use smvx::transpiler::SMVXTranspiler;
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
